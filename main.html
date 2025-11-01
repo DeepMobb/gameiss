@@ -94,8 +94,8 @@
                 // Character exists!
                 actionButton.textContent = "Start Game";
                 actionButton.onclick = () => { 
-                    alert('Game starts here!'); 
-                    // window.location.href = baseURL + 'game.html'; // For later
+                    // UPDATED: Changed from alert to redirect
+                    window.location.href = baseURL + 'game.html'; 
                 };
             } else {
                 // No character found
@@ -116,4 +116,5 @@
     </script>
 </body>
 </html>
+
 
