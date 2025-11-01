@@ -40,8 +40,9 @@
 
         <!-- Center Column: Game World -->
         <main class="game-world">
-            <!-- The "empty" text is replaced by the canvas -->
             <canvas id="game-canvas"></canvas>
+            <!-- NEW: Hotspot Message Display -->
+            <div id="hotspot-message"></div>
         </main>
 
         <!-- Right Column: Game Menu -->
@@ -92,48 +93,76 @@
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
         const gameWorldElement = document.querySelector('.game-world');
+        const hotspotMessage = document.getElementById('hotspot-message'); // NEW
         
-        // --- NEW: Map and Tile Definitions ---
+        // --- Map and Tile Definitions ---
         const TILE_SIZE = 40; // The size of one map tile in pixels
-        // 0 = Grass (walkable), 1 = Wall (solid), 2 = Water (solid)
+        
+        // Tile Types:
+        // 0: Grass, 1: Wall, 2: Water, 3: Forest, 4: Mountain, 5: Volcano
+        // 6: Town Path, 7: Bank, 8: Shop, 9: Townhouse
         const tileMap = [
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 1, 0, 1],
-            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 1, 0, 1],
-            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1],
-            [1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1],
-            [1, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-            [1, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-            [1, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-            [1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+            [4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4],
+            [4, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
+            [4, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
+            [4, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
+            [4, 3, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
+            [4, 3, 0, 0, 1, 6, 6, 6, 6, 1, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
+            [4, 3, 0, 0, 1, 6, 7, 6, 6, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
+            [4, 3, 0, 0, 1, 6, 6, 6, 6, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
+            [4, 3, 0, 0, 1, 6, 8, 6, 9, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
+            [4, 3, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
+            [4, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
+            [4, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
+            [4, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 4],
+            [4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4],
+            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+            [4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4],
+            [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
         ];
         
         const tileColors = {
             0: "#228B22", // Grass (dark green)
             1: "#808080", // Wall (grey)
-            2: "#0000FF"  // Water (blue)
+            2: "#0000FF", // Water (blue)
+            3: "#006400", // Forest (darker green)
+            4: "#696969", // Mountain (dark grey)
+            5: "#FF4500", // Volcano (red-orange) - Not used in map yet
+            6: "#D2B48C", // Town Path (tan)
+            7: "#FFD700", // Bank (gold)
+            8: "#A0522D", // Shop (sienna/brown)
+            9: "#4682B4"  // Townhouse (steel blue)
         };
 
         // Game objects
-        // Start player at tile (1, 1)
         let player = { 
-            x: TILE_SIZE * 1.5, 
-            y: TILE_SIZE * 1.5, 
+            x: TILE_SIZE * 2.5, // Start player at tile (2, 2)
+            y: TILE_SIZE * 2.5, 
             size: 20, 
             speed: 5 
         };
+
+        // NEW: Camera object to follow the player
+        let camera = {
+            x: 0,
+            y: 0
+        };
        
+        // NEW: Timer for hotspot messages
+        let hotspotTimer = null;
+
         // Auth Guard
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -193,42 +222,79 @@
             canvas.height = gameWorldElement.clientHeight;
         }
 
-        // --- NEW: Function to draw the tile-based map ---
+        // --- UPDATED: Function to draw the map centered on the camera ---
         function drawMap() {
-            for (let row = 0; row < tileMap.length; row++) {
-                for (let col = 0; col < tileMap[row].length; col++) {
+            // Calculate starting and ending tiles to draw based on camera
+            const startCol = Math.floor(camera.x / TILE_SIZE);
+            const endCol = Math.ceil((camera.x + canvas.width) / TILE_SIZE);
+            const startRow = Math.floor(camera.y / TILE_SIZE);
+            const endRow = Math.ceil((camera.y + canvas.height) / TILE_SIZE);
+
+            for (let row = startRow; row < endRow; row++) {
+                for (let col = startCol; col < endCol; col++) {
+                    // Check map boundaries
+                    if (row < 0 || row >= tileMap.length || col < 0 || col >= tileMap[0].length) {
+                        continue;
+                    }
+
                     const tileType = tileMap[row][col];
                     ctx.fillStyle = tileColors[tileType];
-                    ctx.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    // Draw tile relative to the camera
+                    ctx.fillRect(
+                        Math.floor(col * TILE_SIZE - camera.x), 
+                        Math.floor(row * TILE_SIZE - camera.y), 
+                        TILE_SIZE + 1, // +1 to prevent gaps
+                        TILE_SIZE + 1
+                    );
                 }
             }
         }
 
+        // --- UPDATED: Function to draw the player in the center of the screen ---
         function drawPlayer() {
+            // Player is always drawn in the center of the canvas
+            const playerCanvasX = canvas.width / 2;
+            const playerCanvasY = canvas.height / 2;
+
             ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color'); // 'Amber'
             ctx.beginPath();
-            ctx.arc(player.x, player.y, player.size / 2, 0, Math.PI * 2);
+            ctx.arc(playerCanvasX, playerCanvasY, player.size / 2, 0, Math.PI * 2);
             ctx.fill();
             ctx.strokeStyle = "#000";
             ctx.stroke();
         }
 
+        // --- UPDATED: Game loop with camera logic ---
         function gameLoop() {
-            // Clear the canvas
-            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-color');
+            // 1. Update Camera
+            // Camera centers on the player, but stops at map edges
+            const mapWidth = tileMap[0].length * TILE_SIZE;
+            const mapHeight = tileMap.length * TILE_SIZE;
+
+            camera.x = player.x - canvas.width / 2;
+            camera.y = player.y - canvas.height / 2;
+
+            // Clamp camera to map boundaries
+            if (camera.x < 0) camera.x = 0;
+            if (camera.y < 0) camera.y = 0;
+            if (camera.x + canvas.width > mapWidth) camera.x = mapWidth - canvas.width;
+            if (camera.y + canvas.height > mapHeight) camera.y = mapHeight - canvas.height;
+
+
+            // 2. Clear the canvas
+            ctx.fillStyle = "#000"; // Fill with black (faster than CSS var)
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw game elements
-            drawMap(); // Replaced drawGrid()
+            // 3. Draw game elements
+            drawMap();
             drawPlayer();
 
-            // Loop
+            // 4. Loop
             requestAnimationFrame(gameLoop);
         }
 
-        // --- NEW: Collision Detection Function ---
+        // --- UPDATED: Collision Detection Function ---
         function isWalkable(x, y) {
-            // Get the tile the player's center is on
             const col = Math.floor(x / TILE_SIZE);
             const row = Math.floor(y / TILE_SIZE);
 
@@ -236,17 +302,62 @@
             if (row < 0 || row >= tileMap.length || col < 0 || col >= tileMap[0].length) {
                 return false;
             }
+            
+            const tileType = tileMap[row][col];
 
-            // Check if tile type is walkable (0 = Grass)
-            return tileMap[row][col] === 0;
+            // Check if tile type is walkable
+            // Walkable: 0 (Grass), 6 (Town Path), 7 (Bank), 8 (Shop), 9 (Townhouse)
+            // Not Walkable: 1 (Wall), 2 (Water), 3 (Forest), 4 (Mountain), 5 (Volcano)
+            return tileType === 0 || tileType >= 6;
         }
+
+        // --- NEW: Hotspot Check Function ---
+        function checkHotspots(x, y) {
+            const col = Math.floor(x / TILE_SIZE);
+            const row = Math.floor(y / TILE_SIZE);
+
+            if (row < 0 || row >= tileMap.length || col < 0 || col >= tileMap[0].length) {
+                return;
+            }
+            
+            const tileType = tileMap[row][col];
+            let message = "";
+
+            switch (tileType) {
+                case 7: // Bank
+                    message = "You entered the Bank of Mythic Realm.";
+                    break;
+                case 8: // Shop
+                    message = "You found the General Store.";
+                    break;
+                case 9: // Townhouse
+                    message = "You are at the Townhouse. Quests await!";
+                    break;
+            }
+
+            if (message) {
+                // Clear any existing timer
+                if (hotspotTimer) clearTimeout(hotspotTimer);
+                
+                hotspotMessage.textContent = message;
+                hotspotMessage.style.display = 'block';
+                hotspotMessage.style.animation = 'none'; // Reset animation
+                void hotspotMessage.offsetWidth; // Trigger reflow
+                hotspotMessage.style.animation = 'fadeInOut 4s forwards';
+                
+                hotspotTimer = setTimeout(() => {
+                    hotspotMessage.style.display = 'none';
+                }, 4000);
+            }
+        }
+
 
         // --- Event Listeners ---
         
         // Resize canvas if window size changes
         window.addEventListener('resize', resizeCanvas);
 
-        // Player movement (UPDATED with collision)
+        // Player movement (UPDATED with collision and hotspot checks)
         window.addEventListener('keydown', (e) => {
             let newX = player.x;
             let newY = player.y;
@@ -264,12 +375,10 @@
                 case 'ArrowRight':
                     newX += player.speed;
                     break;
+                default:
+                    return; // Don't check for hotspots if no movement key
             }
 
-            // --- Check for collision BEFORE moving ---
-            // We check collision on both the new X and new Y separately
-            // This allows sliding along walls
-            
             // Check horizontal movement
             if (isWalkable(newX, player.y)) {
                 player.x = newX;
@@ -279,12 +388,9 @@
             if (isWalkable(player.x, newY)) {
                 player.y = newY;
             }
-
-            // Simple boundary collision (redundant with map, but good fallback)
-            if (player.x < player.size / 2) player.x = player.size / 2;
-            if (player.y < player.size / 2) player.y = player.size / 2;
-            if (player.x > canvas.width - player.size / 2) player.x = canvas.width - player.size / 2;
-            if (player.y > canvas.height - player.size / 2) player.y = canvas.height - player.size / 2;
+            
+            // Check for hotspot after moving
+            checkHotspots(player.x, player.y);
         });
 
         // Logout button
