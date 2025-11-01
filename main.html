@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Menu - Mythic Realm</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container animated-background">
+        <div class="main-menu">
+            <h1>Welcome, <span id="player-name">Adventurer</span></h1>
+            <p>Your destiny awaits.</p>
+            
+            <button id="action-button" class="btn btn-large"></button>
+            
+            <button id="logout-button" class="btn btn-secondary">Logout</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import functions from the Firebase SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        // ▼▼▼ PASTE YOUR FIREBASE CONFIG OBJECT HERE ▼▼▼
+        const firebaseConfig = {
+          apiKey: "YOUR_API_KEY",
+          authDomain: "YOUR_AUTH_DOMAIN",
+          projectId: "YOUR_PROJECT_ID",
+          storageBucket: "YOUR_STORAGE_BUCKET",
+          messagingSenderId: "YOUR_SENDER_ID",
+          appId: "YOUR_APP_ID"
+        };
+        // ▲▲▲ PASTE YOUR FIREBASE CONFIG OBJECT HERE ▲▲▲
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Get elements
+        const playerNameEl = document.getElementById('player-name');
+        const actionButton = document.getElementById('action-button');
+        const logoutButton = document.getElementById('logout-button');
+
+        // Listen for auth changes
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is logged in
+                // Set welcome message
+                playerNameEl.textContent = user.displayName || user.email;
+
+                // Check if user has a character
+                checkCharacter(user.uid);
+
+            } else {
+                // User is signed out, redirect to login
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Function to check for character
+        async function checkCharacter(uid) {
+            const charDocRef = doc(db, "characters", uid);
+            const charDocSnap = await getDoc(charDocRef);
+
+            if (charDocSnap.exists()) {
+                // Character exists!
+                actionButton.textContent = "Start Game";
+                actionButton.onclick = () => { 
+                    alert('Game starts here!'); 
+                    // Later, you would change this to:
+                    // window.location.href = 'game.html';
+                };
+            } else {
+                // No character found
+                actionButton.textContent = "Create Character";
+                actionButton.onclick = () => { 
+                    window.location.href = 'create.html'; 
+                };
+            }
+        }
+
+        // Logout button
+        logoutButton.addEventListener('click', () => {
+            signOut(auth).catch((error) => {
+                console.error("Error signing out: ", error);
+            });
+        });
+    </script>
+</body>
+</html>

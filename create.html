@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Character - Mythic Realm</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="form-box creation-form">
+            <h1>Create Your Hero</h1>
+            <form id="character-create-form">
+                
+                <label for="char-name">Character Name:</label>
+                <input type="text" id="char-name" placeholder="Max 8 letters, no numbers" 
+                       maxlength="8" pattern="[A-Za-z]{1,8}" 
+                       title="Max 8 letters, no numbers or special characters." required>
+                <hr>
+
+                <label>Gender:</label>
+                <div class="radio-group">
+                    <input type="radio" id="gender-male" name="gender" value="male" required>
+                    <label for="gender-male">Male</label>
+                    <input type="radio" id="gender-female" name="gender" value="female" required>
+                    <label for="gender-female">Female</label>
+                </div>
+                <hr>
+
+                <label>Mythical Race:</label>
+                <div class="radio-group race-selection">
+                    <input type="radio" id="race-sprite" name="race" value="Glimmer-sprite" required>
+                    <label for="race-sprite" class="race-label">
+                        <div class="race-preview sprite"></div>
+                        <strong>Glimmer-sprite</strong>
+                        <p>Short, slim, and uncannily fast. Fey tricksters of the hidden world.</p>
+                    </label>
+                    
+                    <input type="radio" id="race-skystrider" name="race" value="Skystrider" required>
+                    <label for="race-skystrider" class="race-label">
+                        <div class="race-preview skystrider"></div>
+                        <strong>Skystrider</strong>
+                        <p>A massive, winged race, bound to the mountaintops and the open sky.</p>
+                    </label>
+                    
+                    <input type="radio" id="race-wisp" name="race" value="Aura-wisp" required>
+                    <label for="race-wisp" class="race-label">
+                        <div class="race-preview wisp"></div>
+                        <strong>Aura-wisp</strong>
+                        <p>Half-material, half-spirit. A spectral being that walks between worlds.</p>
+                    </label>
+                </div>
+                <hr>
+
+                <label>Physical Modifications:</label>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="mod-eyes" name="mod" value="glowing-eyes">
+                    <label for="mod-eyes">Glowing Eyes</label>
+                    
+                    <input type="checkbox" id="mod-trail" name="mod" value="spectral-trail">
+                    <label for="mod-trail">Spectral Trail</label>
+                    
+                    <input type="checkbox" id="mod-wings" name="mod" value="larger-wings">
+                    <label for="mod-wings">Larger Wings</label>
+                </div>
+                <hr>
+                
+                <button type="submit" class="btn btn-large">Forge Character</button>
+            </form>
+        </div>
+    </div>
+    
+    <script type="module">
+        // Import functions from the Firebase SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        // ▼▼▼ PASTE YOUR FIREBASE CONFIG OBJECT HERE ▼▼▼
+        const firebaseConfig = {
+          apiKey: "YOUR_API_KEY",
+          authDomain: "YOUR_AUTH_DOMAIN",
+          projectId: "YOUR_PROJECT_ID",
+          storageBucket: "YOUR_STORAGE_BUCKET",
+          messagingSenderId: "YOUR_SENDER_ID",
+          appId: "YOUR_APP_ID"
+        };
+        // ▲▲▲ PASTE YOUR FIREBASE CONFIG OBJECT HERE ▲▲▲
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Get elements
+        const createForm = document.getElementById('character-create-form');
+        let currentUserId = null; // Variable to store the user's ID
+
+        // Check if user is logged in
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in
+                currentUserId = user.uid;
+            } else {
+                // User is signed out, redirect to login
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Listen for form submission
+        createForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Stop the form from reloading the page
+            
+            if (!currentUserId) {
+                alert("Error: No user logged in.");
+                return;
+            }
+
+            // Get all form data
+            const charName = document.getElementById('char-name').value;
+            const gender = document.querySelector('input[name="gender"]:checked').value;
+            const race = document.querySelector('input[name="race"]:checked').value;
+            
+            // Get all checked modifications
+            const mods = [];
+            document.querySelectorAll('input[name="mod"]:checked').forEach((checkbox) => {
+                mods.push(checkbox.value);
+            });
+
+            // Create a data object
+            const characterData = {
+                name: charName,
+                gender: gender,
+                race: race,
+                modifications: mods,
+                level: 1, // Start every new character at level 1
+                createdAt: new Date() // Timestamp
+            };
+
+            try {
+                // Save the data to Firestore
+                // We use the user's ID (currentUserId) as the document ID
+                // This links the character directly to the user
+                await setDoc(doc(db, "characters", currentUserId), characterData);
+                
+                // Success! Redirect to the main menu
+                alert("Character created!");
+                window.location.href = 'main.html';
+
+            } catch (error) {
+                console.error("Error writing document: ", error);
+                alert("Could not create character. Please try again.");
+            }
+        });
+    </script>
+</body>
+</html>
