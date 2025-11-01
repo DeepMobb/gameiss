@@ -572,6 +572,11 @@ input[type="radio"]:checked + .race-label .race-preview {
     height: 100%;
     display: block;
     background-color: #000;
+    /* NEW: Add border and sharp rendering */
+    border: 1px solid var(--secondary-color);
+    border-radius: 8px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
 }
 
 /* HOTSPOT MESSAGE */
