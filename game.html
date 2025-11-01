@@ -31,9 +31,7 @@
             <h2 id="char-name">Character Name</h2>
             <p id="char-race-gender">Race & Gender</p>
             
-            <!-- This preview is now the CSS block character -->
             <div class="char-preview" id="char-preview">
-                <!-- This structure will be populated by loadCharacter -->
                 <div class="char-head">
                     <div id="char-eyes" class="char-eyes"></div>
                 </div>
@@ -47,7 +45,6 @@
             <div class="char-stats">
                 <h3>Stats</h3>
                 <p>Level: <span id="char-level">1</span></p>
-                <!-- UPDATED Instructions -->
                 <p>Use the <strong>Arrow Keys</strong> to move.</p>
                 <p><strong>Click</strong> on hotspots (Bank, Shop, Townhouse) when you are near them to interact.</p>
                 
@@ -93,19 +90,15 @@
 
     <!-- Loader, shown by default -->
     <div id="loader">
-        <p>Loading Character...</p>
+        <p>Loading Assets...</p>
     </div>
 
     
-    <!-- REMOVED Three.js imports -->
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         
-        // REMOVED 3D Imports
-
         // ▼▼▼ YOUR FIREBASE CONFIG ▼▼▼
         const firebaseConfig = {
           apiKey: "AIzaSyBws0s5YOGs4na5sGZCL9CEgmhuU_YiH2M",
@@ -137,9 +130,9 @@
         const goldAmountEl = document.getElementById('gold-amount');
         const inventoryGridEl = document.getElementById('inventory-grid');
         
-        // --- NEW: 2D Game Setup ---
+        // --- NEW: 2D Game Setup with Textures ---
         let ctx;
-        const tileSize = 32;
+        const tileSize = 32; // Size of your tile images
         let hotspotTimer = null;
         
         // 0=Grass, 1=Wall, 2=Path, 3=Bank, 4=Shop, 5=Townhouse
@@ -162,30 +155,80 @@
         ];
         
         const player = {
-            x: 1,
+            x: 1, // Grid position, not pixels
             y: 1,
             size: tileSize / 2,
             color: '#ffab40'
         };
-
-        // Tile colors
-        const tileColors = {
-            0: '#228B22', // Grass
-            1: '#444444', // Wall
-            2: '#8B4513', // Path
-            3: '#FFD700', // Bank (Gold)
-            4: '#A0522D', // Shop (Brown)
-            5: '#4682B4'  // Townhouse (Blue)
+        
+        // --- NEW: Tile Image Setup ---
+        const tileImages = {
+            0: new Image(), // Grass
+            1: new Image(), // Wall
+            2: new Image(), // Path
+            3: new Image(), // Bank
+            4: new Image(), // Shop
+            5: new Image()  // Townhouse
         };
+        let allImagesLoaded = false;
+        
+        // --- ACTION REQUIRED: Replace these URLs ---
+        const tileSrc = {
+            0: 'https://placehold.co/32x32/228B22/000?text=Grass',
+            1: 'https://placehold.co/32x32/444/999?text=Wall',
+            2: 'https://placehold.co/32x32/8B4513/000?text=Path',
+            3: 'https://placehold.co/32x32/FFD700/000?text=Bank',
+            4: 'https://placehold.co/32x32/A0522D/000?text=Shop',
+            5: 'https://placehold.co/32x32/4682B4/000?text=Town'
+        };
+        
+        // --- NEW: Camera/Viewport variables ---
+        let cameraX = 0;
+        let cameraY = 0;
 
         // Auth Guard
         onAuthStateChanged(auth, (user) => {
             if (user) {
+                // NEW: Load game assets *before* loading character
+                loadImages();
                 loadCharacter(user.uid);
             } else {
                 window.location.href = baseURL + 'index.html';
             }
         });
+        
+        // NEW: Image Loading Function
+        function loadImages() {
+            let loadedCount = 0;
+            const totalImages = Object.keys(tileSrc).length;
+
+            Object.keys(tileSrc).forEach(key => {
+                tileImages[key].src = tileSrc[key];
+                tileImages[key].onload = () => {
+                    loadedCount++;
+                    if (loadedCount === totalImages) {
+                        allImagesLoaded = true;
+                        tryStartGame(); // Try to start game
+                    }
+                };
+                tileImages[key].onerror = () => {
+                    console.error(`Failed to load image for tile type ${key}`);
+                };
+            });
+        }
+        
+        let characterLoaded = false;
+        
+        // NEW: Gatekeeper to ensure images and char are loaded
+        function tryStartGame() {
+            if (allImagesLoaded && characterLoaded) {
+                loader.style.display = 'none';
+                gameUI.style.display = 'grid';
+                
+                init2DScene();
+                animate();
+            }
+        }
 
         // Load Character Function
         async function loadCharacter(uid) {
@@ -205,13 +248,11 @@
             document.getElementById('char-race-gender').textContent = `${charData.race} (${charData.gender})`;
             document.getElementById('char-level').textContent = charData.level;
             
-            // --- NEW: Populate CSS Block Character ---
             const preview = document.getElementById('char-preview');
             preview.className = 'char-preview'; // Reset
-            preview.classList.add(charData.race.toLowerCase().replace('-', '')); // e.g. "glimmersprite"
-            preview.classList.add(charData.gender.toLowerCase()); // "male" or "female"
+            preview.classList.add(charData.race.toLowerCase().replace('-', ''));
+            preview.classList.add(charData.gender.toLowerCase());
 
-            // Apply modifications
             if (charData.modifications.includes('glowing-eyes')) {
                 preview.querySelector('#char-eyes').style.display = 'block';
             }
@@ -222,10 +263,9 @@
                 preview.querySelector('#char-wings').style.transform = 'scale(1.5)';
             }
             
-            // Populate modifications list
             const modsList = document.getElementById('mods-list');
             if (charData.modifications && charData.modifications.length > 0) {
-                modsList.innerHTML = ''; // Clear "None"
+                modsList.innerHTML = '';
                 charData.modifications.forEach(mod => {
                     const li = document.createElement('li');
                     li.textContent = mod.replace(/-/g, ' ');
@@ -238,7 +278,7 @@
             inventoryGridEl.innerHTML = ''; 
             
             if (charData.inventory && charData.inventory.length > 0) {
-                // This is where you would loop through items
+                // ...
             } else {
                 for(let i=0; i < 7; i++) {
                      const emptySlot = document.createElement('div');
@@ -248,16 +288,12 @@
                 }
             }
             
-            // --- Initialize Game Once Character is Loaded ---
-            loader.style.display = 'none';
-            gameUI.style.display = 'grid';
-            
-            // Set up and run the 2D scene
-            init2DScene();
-            animate();
+            // --- Character is loaded, try to start ---
+            characterLoaded = true;
+            tryStartGame();
         }
 
-        // --- NEW: 2D Game Functions ---
+        // --- UPDATED: 2D Game Functions ---
         function init2DScene() {
             ctx = canvas.getContext('2d');
             resizeCanvas();
@@ -273,23 +309,57 @@
             canvas.height = container.clientHeight;
         }
 
+        // NEW: Camera update function
+        function updateCamera() {
+            // Center camera on player, converting grid coords to pixel coords
+            // Subtract half canvas size to center
+            cameraX = player.x * tileSize - canvas.width / 2 + (tileSize / 2);
+            cameraY = player.y * tileSize - canvas.height / 2 + (tileSize / 2);
+
+            // Clamp camera to map boundaries
+            const maxCameraX = map[0].length * tileSize - canvas.width;
+            const maxCameraY = map.length * tileSize - canvas.height;
+            
+            cameraX = Math.max(0, Math.min(cameraX, maxCameraX));
+            cameraY = Math.max(0, Math.min(cameraY, maxCameraY));
+        }
+
         function drawMap() {
-            for (let y = 0; y < map.length; y++) {
-                for (let x = 0; x < map[y].length; x++) {
+            // Find which tiles are visible in the camera
+            const xStart = Math.floor(cameraX / tileSize);
+            const yStart = Math.floor(cameraY / tileSize);
+            const xEnd = Math.ceil((cameraX + canvas.width) / tileSize);
+            const yEnd = Math.ceil((cameraY + canvas.height) / tileSize);
+
+            for (let y = yStart; y < yEnd; y++) {
+                for (let x = xStart; x < xEnd; x++) {
+                    
+                    // Ensure we're not drawing off-map
+                    if (y < 0 || y >= map.length || x < 0 || x >= map[0].length) {
+                        continue;
+                    }
+
                     const tileType = map[y][x];
-                    ctx.fillStyle = tileColors[tileType];
-                    ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+                    const drawX = Math.floor(x * tileSize - cameraX);
+                    const drawY = Math.floor(y * tileSize - cameraY);
+                    
+                    // Draw the tile image
+                    ctx.drawImage(tileImages[tileType], drawX, drawY, tileSize, tileSize);
                 }
             }
         }
         
         function drawPlayer() {
+            // Player is always drawn relative to the camera
+            const playerDrawX = Math.floor(player.x * tileSize - cameraX);
+            const playerDrawY = Math.floor(player.y * tileSize - cameraY);
+
             ctx.fillStyle = player.color;
             ctx.beginPath();
             ctx.arc(
-                player.x * tileSize + player.size / 2, 
-                player.y * tileSize + player.size / 2, 
-                player.size / 2, 
+                playerDrawX + player.size, // Centered
+                playerDrawY + player.size, // Centered
+                player.size, 
                 0, 
                 Math.PI * 2
             );
@@ -298,7 +368,11 @@
         
         function animate() {
             requestAnimationFrame(animate);
+            if (!allImagesLoaded || !characterLoaded) return; // Wait
+            
             ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear screen
+            
+            updateCamera(); // Update camera position *before* drawing
             drawMap();
             drawPlayer();
         }
@@ -312,10 +386,9 @@
                 case 'ArrowDown': newY += 1; break;
                 case 'ArrowLeft': newX -= 1; break;
                 case 'ArrowRight': newX += 1; break;
-                default: return; // Exit if not an arrow key
+                default: return;
             }
             
-            // Collision detection
             if (isWalkable(newX, newY)) {
                 player.x = newX;
                 player.y = newY;
@@ -324,17 +397,19 @@
         
         function isWalkable(x, y) {
             if (y < 0 || y >= map.length || x < 0 || x >= map[0].length) {
-                return false; // Out of bounds
+                return false;
             }
             const tileType = map[y][x];
-            return tileType !== 1; // 1 = Wall
+            return tileType !== 1; // 1 = Wall. Player can walk on 0, 2, 3, 4, 5
         }
 
         function handleMapClick(e) {
             const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
+            // Translate screen click to world pixel coordinates
+            const mouseX = e.clientX - rect.left + cameraX;
+            const mouseY = e.clientY - rect.top + cameraY;
             
+            // Convert world pixel coordinates to grid coordinates
             const tileX = Math.floor(mouseX / tileSize);
             const tileY = Math.floor(mouseY / tileSize);
 
@@ -346,15 +421,9 @@
                 const tileType = map[tileY][tileX];
                 let message = "";
                 switch (tileType) {
-                    case 3: // Bank
-                        message = "You clicked the Bank. Deposit your gold!";
-                        break;
-                    case 4: // Shop
-                        message = "You clicked the Shop. Buy some items!";
-                        break;
-                    case 5: // Townhouse
-                        message = "You clicked the Townhouse. Quests await!";
-                        break;
+                    case 3: message = "You clicked the Bank. Deposit your gold!"; break;
+                    case 4: message = "You clicked the Shop. Buy some items!"; break;
+                    case 5: message = "You clicked the Townhouse. Quests await!"; break;
                 }
                 
                 if (message) {
