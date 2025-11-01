@@ -142,7 +142,7 @@ input:focus {
     box-shadow: 0 5px 15px rgba(200, 200, 200, 0.2);
 }
 
-/* NEW: Reset Button */
+/* Reset Button */
 .btn-reset {
     position: absolute;
     bottom: 10px;
@@ -184,11 +184,32 @@ input:focus {
     margin-bottom: 40px;
 }
 
-/* Character Creation Screen */
+/* --- MODIFIED: Character Creation Screen Layout --- */
 .creation-form {
-    max-width: 800px;
+    max-width: 1000px; /* Widen form box */
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* 2/3 for form, 1/3 for preview */
+    gap: 40px;
     text-align: left;
 }
+
+.creation-form h1 {
+    text-align: left;
+    grid-column: 1 / 3; /* Title spans both columns */
+}
+
+.form-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.preview-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 20px;
+}
+
 .creation-form label {
     font-size: 1.1rem;
     font-weight: 600;
@@ -233,13 +254,13 @@ input[type="checkbox"]:checked + label {
 
 .race-selection {
     flex-direction: column;
-    gap: 20px;
+    gap: 10px; /* Tighter spacing */
 }
 .race-label {
     display: flex;
     align-items: center;
     gap: 20px;
-    padding: 20px;
+    padding: 15px; /* Tighter padding */
     text-align: left;
 }
 .race-label strong { font-size: 1.2rem; }
@@ -247,12 +268,11 @@ input[type="checkbox"]:checked + label {
 
 /* STYLES FOR CHARACTER CREATION PREVIEWS */
 .race-preview {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
     border-radius: 8px;
     flex-shrink: 0;
     border: 2px solid #555;
-    /* These are the placeholder "character" graphics */
 }
 .race-preview.sprite { 
     background-color: #76ff03; /* Bright Green */ 
@@ -268,13 +288,15 @@ input[type="radio"]:checked + .race-label .race-preview {
     border-color: var(--secondary-color);
 }
 
-/* NEW: Preview box on Create Screen */
+/* Preview box on Create Screen */
 .char-preview-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 15px;
     margin-bottom: 10px;
+    position: sticky; /* Sticks to top as user scrolls */
+    top: 20px;
 }
 .char-preview-container #preview-text {
     font-size: 1rem;
@@ -301,6 +323,7 @@ input[type="radio"]:checked + .race-label .race-preview {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    z-index: 10; /* Keep on top of canvas */
 }
 
 .char-sheet h2 {
@@ -324,107 +347,191 @@ input[type="radio"]:checked + .race-label .race-preview {
     color: var(--secondary-color);
     margin-bottom: 10px;
 }
+.char-stats p {
+    font-size: 0.9rem;
+    color: #ccc;
+    margin-bottom: 5px;
+}
 
-/* Character Visual Preview */
+
+/* --- NEW: "WHOLE CHARACTER" PREVIEW STYLES --- */
 .char-preview {
-    width: 180px;
-    height: 180px;
-    border-radius: 50%;
+    width: 200px;
+    height: 300px; /* Taller */
     margin: 10px auto;
     position: relative;
-    border: 4px solid #444;
-    overflow: hidden;
-    transition: background-color 0.3s ease;
+    /* border: 1px dashed #444; */
 }
 
-/* Base styles for visual elements (hidden) */
-#char-eyes, #char-wings, #char-trail {
+/* Base parts (hidden by default, shown by race) */
+.char-head, .char-torso, .char-legs, .char-eyes, .char-wings, .char-trail {
     display: none;
     position: absolute;
+    transition: all 0.3s ease;
 }
 
-/* Glimmer-sprite (Short/Slim) */
-.char-preview.glimmer-sprite {
-    background: radial-gradient(circle, #c6ff00, #76ff03);
-    width: 140px; /* Slimmer */
-    height: 140px;
-    border-width: 3px;
-    box-shadow: 0 0 20px #76ff03;
+/* --- Glimmer-sprite (Short/Slim) --- */
+.glimmersprite .char-head {
+    display: block;
+    width: 40px;
+    height: 40px;
+    background: #c6ff00;
+    border-radius: 50%;
+    left: 50%;
+    top: 100px;
+    transform: translateX(-50%);
+    box-shadow: 0 0 15px #76ff03;
 }
+.glimmersprite .char-torso {
+    display: block;
+    width: 30px;
+    height: 60px;
+    background: #76ff03;
+    left: 50%;
+    top: 145px;
+    transform: translateX(-50%);
+}
+.glimmersprite .char-legs {
+    display: block;
+}
+.glimmersprite .char-legs::before, .glimmersprite .char-legs::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 50px;
+    background: #c6ff00;
+    top: 205px;
+}
+.glimmersprite .char-legs::before { left: 85px; }
+.glimmersprite .char-legs::after { right: 85px; }
 
-/* Skystrider (Big/Wings) */
-.char-preview.skystrider {
-    background: radial-gradient(circle, #80d8ff, #40c4ff);
-    border-color: #80d8ff;
-    box-shadow: 0 0 20px #40c4ff;
+/* --- Skystrider (Big/Wings) --- */
+.skystrider .char-head {
+    display: block;
+    width: 50px;
+    height: 50px;
+    background: #80d8ff;
+    border-radius: 50%;
+    left: 50%;
+    top: 60px;
+    transform: translateX(-50%);
+    box-shadow: 0 0 15px #40c4ff;
 }
-/* Skystrider Wings */
-#char-wings {
+.skystrider .char-torso {
+    display: block;
+    width: 80px;
+    height: 100px;
+    background: #40c4ff;
+    border-radius: 10px;
+    left: 50%;
+    top: 115px;
+    transform: translateX(-50%);
+}
+.skystrider .char-legs {
+    display: block;
+}
+.skystrider .char-legs::before, .skystrider .char-legs::after {
+    content: '';
+    position: absolute;
+    width: 25px;
+    height: 80px;
+    background: #80d8ff;
+    top: 215px;
+}
+.skystrider .char-legs::before { left: 70px; }
+.skystrider .char-legs::after { right: 70px; }
+
+/* Skystrider Wings (Now attached to torso) */
+.skystrider .char-wings {
     display: block;
     width: 100%;
     height: 100%;
+    z-index: -1;
+    transform-origin: center;
 }
-#char-wings::before, #char-wings::after {
+.skystrider .char-wings::before, .skystrider .char-wings::after {
     content: '';
     position: absolute;
-    width: 30px;
-    height: 80px;
+    width: 40px;
+    height: 120px;
     background: #e1f5fe;
     border: 2px solid #b3e5fc;
     border-radius: 50% 50% 10% 10% / 60% 60% 40% 40%;
-    top: 30px;
+    top: -20px;
     box-shadow: 0 0 10px white inset;
 }
-#char-wings::before {
-    left: 20px;
-    transform: rotate(-30deg);
+.skystrider .char-wings::before {
+    left: -40px;
+    transform: rotate(-25deg);
 }
-#char-wings::after {
-    right: 20px;
-    transform: rotate(30deg);
+.skystrider .char-wings::after {
+    right: -40px;
+    transform: rotate(25deg);
 }
 
 
-/* Aura-wisp (Ghost) */
-.char-preview.aura-wisp {
-    background: radial-gradient(circle, #ea80fc, #d500f9);
-    border-color: #ea80fc;
-    box-shadow: 0 0 25px #d500f9;
+/* --- Aura-wisp (Ghost) --- */
+.aurawisp {
     animation: pulse 2s infinite ease-in-out;
 }
-#char-trail {
+.aurawisp .char-head {
     display: block;
-    width: 100%;
-    height: 50%;
-    background: linear-gradient(to top, rgba(234, 128, 252, 0.4), transparent);
-    bottom: 0;
-    left: 0;
+    width: 50px;
+    height: 50px;
+    background: #ea80fc;
+    border-radius: 50%;
+    left: 50%;
+    top: 80px;
+    transform: translateX(-50%);
+    box-shadow: 0 0 20px #d500f9;
+    opacity: 0.9;
+}
+.aurawisp .char-torso {
+    display: block;
+    width: 60px;
+    height: 90px;
+    background: #d500f9;
+    left: 50%;
+    top: 135px;
+    transform: translateX(-50%);
+    opacity: 0.8;
+}
+/* No legs for wisp */
+.aurawisp .char-trail {
+    display: block;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(to top, rgba(234, 128, 252, 0.5), transparent);
+    bottom: 0px;
+    left: 50%;
+    transform: translateX(-50%);
     opacity: 0.7;
-    filter: blur(5px);
+    filter: blur(10px);
+    border-radius: 50% 50% 0 0;
 }
 
 @keyframes pulse {
     0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.05); opacity: 0.8; }
+    50% { transform: scale(1.02) translateY(-5px); opacity: 0.85; }
     100% { transform: scale(1); opacity: 1; }
 }
 
 /* Glowing Eyes Modification */
-#char-eyes {
+.char-eyes {
     width: 100%;
     top: 40%;
 }
-#char-eyes::before, #char-eyes::after {
+.char-eyes::before, .char-eyes::after {
     content: '';
     position: absolute;
-    width: 15px;
-    height: 15px;
+    width: 8px;
+    height: 8px;
     background: white;
     border-radius: 50%;
-    box-shadow: 0 0 15px white, 0 0 25px white;
+    box-shadow: 0 0 10px white, 0 0 15px white;
 }
-#char-eyes::before { left: 30%; }
-#char-eyes::after { right: 30%; }
+.char-eyes::before { left: 30%; }
+.char-eyes::after { right: 30%; }
 
 
 /* Center Column: Game World */
@@ -444,6 +551,7 @@ input[type="radio"]:checked + .race-label .race-preview {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    z-index: 10; /* Keep on top of canvas */
 }
 .game-menu h3 {
     color: var(--secondary-color);
@@ -455,7 +563,7 @@ input[type="radio"]:checked + .race-label .race-preview {
     text-align: left;
 }
 
-/* STYLE FOR THE GAME CANVAS */
+/* STYLE FOR THE GAME CANVAS (now 3D) */
 #game-canvas {
     width: 100%;
     height: 100%;
@@ -463,7 +571,7 @@ input[type="radio"]:checked + .race-label .race-preview {
     background-color: #000; /* Black background */
 }
 
-/* NEW: HOTSPOT MESSAGE */
+/* HOTSPOT MESSAGE */
 #hotspot-message {
     position: absolute;
     bottom: 20px;
@@ -477,6 +585,7 @@ input[type="radio"]:checked + .race-label .race-preview {
     font-size: 1.2rem;
     display: none; /* Hidden by default */
     animation: fadeInOut 4s forwards;
+    z-index: 20; /* On top of everything */
 }
 
 @keyframes fadeInOut {
