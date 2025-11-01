@@ -4,35 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mythic Realm - Login</title>
-    <!-- Use "styles.css" to match your file -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container animated-background">
-        <div class="form-box" id="auth-box">
-            
-            <h1 id="auth-title">Login</h1>
-            <p>Welcome, adventurer. Your journey begins here.</p>
+        <div class="form-box">
+            <h1 id="form-title">Login</h1>
             
             <form id="auth-form">
-                <input type="email" id="email" placeholder="Email" required>
-                <input type="password" id="password" placeholder="Password" required>
-                <!-- "Confirm Password" field, hidden by default -->
-                <input type="password" id="confirm-password" placeholder="Confirm Password" style="display: none;">
+                <input type="email" id="auth-email" placeholder="Email" required>
+                <input type="password" id="auth-password" placeholder="Password" required>
+                
+                <!-- This field is hidden by default -->
+                <div id="confirm-pass-container" style="display: none;">
+                    <input type="password" id="auth-confirm-password" placeholder="Confirm Password">
+                </div>
                 
                 <button type="submit" class="btn" id="auth-button">Login</button>
             </form>
             
-            <p id="toggle-text">Don't have an account? <a href="#" id="toggle-link">Create one</a></p>
-            
             <p>... or ...</p>
             
+            <!-- Google Sign-in Button -->
             <button id="google-signin" class="btn btn-google">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google G Logo" width="20" height="20">
                 Sign in with Google
             </button>
             
             <p id="auth-error" class="error-message"></p>
+
+            <p id="toggle-text">Need an account? <a href="#" id="toggle-link">Create one</a></p>
+
+            <!-- NEW: Master Reset Button -->
+            <button id="master-reset" class="btn-reset">Admin Reset</button>
         </div>
     </div>
     
@@ -50,6 +54,13 @@
             signInWithPopup,
             onAuthStateChanged
         } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        // NEW: Import Firestore functions for reset
+        import { 
+            getFirestore, 
+            collection, 
+            getDocs, 
+            deleteDoc 
+        } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
         // ▼▼▼ YOUR FIREBASE CONFIG ▼▼▼
         const firebaseConfig = {
@@ -65,22 +76,24 @@
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-
-        // --- THIS IS THE FIX FOR THE URL ERROR ---
+        const db = getFirestore(app); // NEW: Initialize Firestore
         const baseURL = "https://deepmobb.github.io/gameiss/";
-
+        
         // Get elements
         const authForm = document.getElementById('auth-form');
+        const authEmail = document.getElementById('auth-email');
+        const authPassword = document.getElementById('auth-password');
+        const authConfirmPassword = document.getElementById('auth-confirm-password');
+        const confirmPassContainer = document.getElementById('confirm-pass-container');
+        
         const googleBtn = document.getElementById('google-signin');
         const authError = document.getElementById('auth-error');
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
-        const confirmPasswordInput = document.getElementById('confirm-password');
-        
-        const authTitle = document.getElementById('auth-title');
+        const formTitle = document.getElementById('form-title');
         const authButton = document.getElementById('auth-button');
-        const toggleText = document.getElementById('toggle-text');
         const toggleLink = document.getElementById('toggle-link');
+        const toggleText = document.getElementById('toggle-text');
+        
+        const resetButton = document.getElementById('master-reset'); // NEW
 
         let isLoginMode = true;
 
@@ -88,60 +101,60 @@
         toggleLink.addEventListener('click', (e) => {
             e.preventDefault();
             isLoginMode = !isLoginMode;
+            authError.textContent = ''; // Clear errors
             
             if (isLoginMode) {
-                // Switch to Login
-                authTitle.textContent = 'Login';
+                // Switch to Login Mode
+                formTitle.textContent = 'Login';
                 authButton.textContent = 'Login';
-                confirmPasswordInput.style.display = 'none';
-                toggleText.innerHTML = 'Don\'t have an account? <a href="#" id="toggle-link">Create one</a>';
+                toggleText.innerHTML = 'Need an account? <a href="#" id="toggle-link">Create one</a>';
+                confirmPassContainer.style.display = 'none';
             } else {
-                // Switch to Sign-up
-                authTitle.textContent = 'Create Account';
+                // Switch to Sign-up Mode
+                formTitle.textContent = 'Create Account';
                 authButton.textContent = 'Create Account';
-                confirmPasswordInput.style.display = 'block';
-                confirmPasswordInput.required = true;
-                toggleText.innerHTML = 'Already have an account? <a href="#" id="toggle-link">Login</a>';
+                toggleText.innerHTML = 'Have an account? <a href="#" id="toggle-link">Login</a>';
+                confirmPassContainer.style.display = 'block';
             }
-            // Re-add the event listener to the new link
+            // Re-attach listener to the new link
             document.getElementById('toggle-link').addEventListener('click', arguments.callee);
         });
 
-        // Check if user is already logged in
+        // Check auth state
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is signed in, redirect to main menu
-                // FIXED: Used the full, absolute URL
                 window.location.href = baseURL + 'main.html';
             }
         });
 
-        // Handle Form Submit (Login or Sign-up)
+        // Handle form submission (Login or Sign-up)
         authForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const email = emailInput.value;
-            const password = passwordInput.value;
+            authError.textContent = ''; // Clear errors
+            
+            const email = authEmail.value;
+            const password = authPassword.value;
 
             if (isLoginMode) {
-                // --- Login ---
+                // --- LOGIN LOGIC ---
                 signInWithEmailAndPassword(auth, email, password)
                     .then((userCredential) => {
-                        // Signed in, redirect (onAuthStateChanged will handle it)
+                        window.location.href = baseURL + 'main.html';
                     })
                     .catch((error) => {
                         authError.textContent = error.message;
                     });
             } else {
-                // --- Sign-up ---
-                const confirmPassword = confirmPasswordInput.value;
+                // --- SIGN-UP LOGIC ---
+                const confirmPassword = authConfirmPassword.value;
                 if (password !== confirmPassword) {
-                    authError.textContent = "Passwords do not match";
+                    authError.textContent = "Passwords do not match.";
                     return;
                 }
                 
                 createUserWithEmailAndPassword(auth, email, password)
                     .then((userCredential) => {
-                        // Signed in, redirect (onAuthStateChanged will handle it)
+                        window.location.href = baseURL + 'main.html';
                     })
                     .catch((error) => {
                         authError.textContent = error.message;
@@ -154,12 +167,51 @@
             const provider = new GoogleAuthProvider();
             signInWithPopup(auth, provider)
                 .then((result) => {
-                    // Signed in, redirect (onAuthStateChanged will handle it)
+                    window.location.href = baseURL + 'main.html';
                 })
                 .catch((error) => {
                     authError.textContent = error.message;
                 });
         });
+
+        // --- NEW: Master Reset Function ---
+        resetButton.addEventListener('click', () => {
+            const pin = prompt("Enter Admin PIN to reset all character data:");
+            if (pin === "1909") {
+                const confirmReset = confirm("DANGER: This will delete EVERY character from the database. This cannot be undone. Are you absolutely sure?");
+                if (confirmReset) {
+                    deleteAllCharacters();
+                }
+            } else if (pin) {
+                alert("Incorrect PIN.");
+            }
+        });
+
+        async function deleteAllCharacters() {
+            try {
+                const charactersRef = collection(db, "characters");
+                const querySnapshot = await getDocs(charactersRef);
+                
+                if (querySnapshot.empty) {
+                    alert("No character data found to delete.");
+                    return;
+                }
+
+                // Create a batch of delete operations
+                const deletePromises = [];
+                querySnapshot.forEach((doc) => {
+                    deletePromises.push(deleteDoc(doc.ref));
+                });
+                
+                // Wait for all deletions to complete
+                await Promise.all(deletePromises);
+                
+                alert(`Success! Deleted ${querySnapshot.size} characters.`);
+            } catch (error) {
+                console.error("Error deleting characters: ", error);
+                alert("An error occurred while deleting characters. Check console.");
+            }
+        }
     </script>
 </body>
 </html>
