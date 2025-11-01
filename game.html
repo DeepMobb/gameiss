@@ -181,21 +181,23 @@
         // 4. Create "Spawnville" (Western town)
         paintRect(map, 8, 23, 10, 6, 1); // Decorative outer wall
         paintRect(map, 9, 24, 8, 4, 2);  // City "floor" of path tiles
-        map[10][26] = 2; // North entrance
-        map[17][26] = 2; // South entrance (connects to main road)
+        // --- FIXED: Corrected entrance coordinates ---
+        // Remember: map[y][x]
+        map[26][8] = 2; // West entrance (connects to road)
+        map[26][17] = 2; // East entrance (connects to road)
         // Add hotspots (accessible)
-        map[11][25] = 3; // Bank
-        map[11][26] = 4; // Shop
-        map[11][27] = 5; // Townhouse
+        map[25][11] = 3; // Bank
+        map[25][12] = 4; // Shop
+        map[25][13] = 5; // Townhouse
 
         // 5. Create "Easton" (Southeastern town)
         paintRect(map, 55, 60, 10, 8, 1); // Decorative outer wall
         paintRect(map, 56, 61, 8, 6, 2);  // City "floor"
-        map[60][59] = 2; // West entrance (connects to road)
+        map[64][55] = 2; // West entrance (connects to road)
         // Add hotspots (accessible)
-        map[58][62] = 3; // Bank
-        map[58][63] = 4; // Shop
-        map[58][64] = 5; // Townhouse
+        map[62][58] = 3; // Bank
+        map[63][58] = 4; // Shop
+        map[64][58] = 5; // Townhouse
         
         // Player Start Position (Inside Spawnville)
         const player = {
