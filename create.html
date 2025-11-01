@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="container">
-        <!-- MODIFIED: "creation-form" now wraps both columns -->
+        <!-- "creation-form" now wraps both columns -->
         <div class="form-box creation-form">
 
             <!-- COLUMN 1: The Form -->
@@ -66,6 +66,7 @@
                     <!-- Physical Modifications -->
                     <label>Physical Modifications:</label>
                     <div class="checkbox-group">
+                        <!-- NOTE: These are now just data, the image logic is handled separately -->
                         <input type="checkbox" id="mod-eyes" name="mod" value="glowing-eyes">
                         <label for="mod-eyes">Glowing Eyes</label>
                         
@@ -73,7 +74,7 @@
                         <label for="mod-trail">Spectral Trail</label>
                         
                         <input type="checkbox" id="mod-wings" name="mod" value="larger-wings">
-                        <label for="mod-wings">Larger Wings</label>
+                        <label for="mod-wings">Larger Wings (Skystriders only)</label>
                     </div>
                     <hr>
                     
@@ -85,17 +86,14 @@
             <div class="preview-column">
                 <div class="char-preview-container">
                     <p id="preview-text">Select a race to preview your hero</p>
-                    <div id="char-preview" class="char-preview">
-                        <!-- NEW "WHOLE CHARACTER" STRUCTURE -->
-                        <div class="char-head">
-                            <div id="char-eyes" class="char-eyes"></div>
-                        </div>
-                        <div class="char-torso">
-                            <div id="char-wings" class="char-wings"></div>
-                        </div>
-                        <div class="char-legs"></div>
-                        <div id="char-trail" class="char-trail"></div>
+                    
+                    <!-- NEW: This is now an <img> tag -->
+                    <div class="char-preview">
+                        <img id="char-preview-img" 
+                             src="https://placehold.co/300x400/333/999?text=Select+a+Race" 
+                             alt="Character preview">
                     </div>
+                    <p id="preview-note" style="font-size: 0.8rem; color: #777;"></p>
                 </div>
             </div>
 
@@ -128,25 +126,23 @@
 
         // Get elements
         const createForm = document.getElementById('character-create-form');
-        const baseURL = "https://deepmobb.github.io/gameiss/";
+        const baseURL = "https://deepobb.github.io/gameiss/";
         let currentUserId = null; // Variable to store the user's ID
 
-        // --- Preview Elements ---
-        const previewBox = document.getElementById('char-preview');
+        // --- NEW: Preview Image Elements ---
+        const previewImg = document.getElementById('char-preview-img');
         const previewText = document.getElementById('preview-text');
+        const previewNote = document.getElementById('preview-note');
         const raceRadios = document.querySelectorAll('input[name="race"]');
-        
-        // Modification Checkboxes
-        const modEyes = document.getElementById('mod-eyes');
-        const modTrail = document.getElementById('mod-trail');
-        const modWings = document.getElementById('mod-wings');
 
-        // Character Parts
-        const charEyes = document.getElementById('char-eyes');
-        const charTrail = document.getElementById('char-trail');
-        const charWings = document.getElementById('char-wings');
-
-        let selectedRace = ""; // Keep track of the selected race
+        // --- NEW: Placeholder Image URLs ---
+        // You MUST replace these with your own image URLs
+        const raceImageMap = {
+            "Glimmer-sprite": "https://placehold.co/300x400/76ff03/000?text=Glimmer-sprite",
+            "Skystrider": "https://placehold.co/400x400/40c4ff/000?text=Skystrider",
+            "Aura-wisp": "https://i.imgur.com/g8e1qQY.jpeg" // Using a link to your example
+        };
+        const defaultImage = "https://placehold.co/300x400/333/999?text=Select+a+Race";
 
         // Check if user is logged in
         onAuthStateChanged(auth, (user) => {
@@ -159,42 +155,25 @@
             }
         });
 
-        // Event listener for race selection
+        // --- NEW: Event listener for race selection ---
         raceRadios.forEach(radio => {
             radio.addEventListener('change', () => {
-                // Get the value (e.g., "Glimmer-sprite") and clean it
-                selectedRace = radio.value;
-                const raceClass = selectedRace.toLowerCase().replace('-', ''); // "glimmersprite"
+                const raceName = radio.value;
                 
-                // Reset the class list
-                previewBox.className = 'char-preview';
-                // Add the new class
-                previewBox.classList.add(raceClass);
+                // Set the image source
+                previewImg.src = raceImageMap[raceName] || defaultImage;
                 
                 // Update the text
-                previewText.textContent = `Previewing: ${selectedRace}`;
+                previewText.textContent = `Previewing: ${raceName}`;
                 
-                // Update mod visibility based on new race
-                updateModifications();
+                // Add a note about placeholders
+                if (raceImageMap[raceName].includes('placehold.co')) {
+                    previewNote.textContent = "This is a placeholder image.";
+                } else {
+                    previewNote.textContent = ""; // Clear note if it's a real image
+                }
             });
         });
-
-        // --- NEW: Event listeners for modifications ---
-        function updateModifications() {
-            charEyes.style.display = modEyes.checked ? 'block' : 'none';
-            charTrail.style.display = modTrail.checked ? 'block' : 'none';
-            
-            // Special check for wings
-            charWings.style.display = 'none'; // Hide by default
-            if (selectedRace === 'Skystrider') {
-                // Skystriders have wings by default
-                charWings.style.display = 'block';
-                charWings.style.transform = modWings.checked ? 'scale(1.5)' : 'scale(1)';
-            }
-        }
-        modEyes.addEventListener('change', updateModifications);
-        modTrail.addEventListener('change', updateModifications);
-        modWings.addEventListener('change', updateModifications);
 
 
         // Listen for form submission
@@ -224,7 +203,9 @@
                 race: race,
                 modifications: mods,
                 level: 1, // Start every new character at level 1
-                createdAt: new Date() // Timestamp
+                createdAt: new Date(),
+                // NEW: Save the URL of the chosen character image
+                imageUrl: raceImageMap[race] || defaultImage 
             };
 
             try {
