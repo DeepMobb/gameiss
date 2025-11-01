@@ -39,7 +39,7 @@
                     <div id="char-wings" class="char-wings"></div>
                 </div>
                 <div class="char-legs"></div>
-                <div id="char-trail" class="char-trail"></div>
+                <div id="char-trail" class_a="char-trail"></div>
             </div>
             
             <div class="char-stats">
@@ -172,14 +172,14 @@
         };
         let allImagesLoaded = false;
         
-        // --- ACTION REQUIRED: Replace these URLs ---
+        // --- FIXED: Added ?raw=true to all URLs ---
         const tileSrc = {
-            0: 'https://github.com/DeepMobb/gameiss/blob/39ab769bf4c9da6d022a6d63e67bf6b94d58e1bb/grass.png',
-            1: 'https://github.com/DeepMobb/gameiss/blob/39ab769bf4c9da6d022a6d63e67bf6b94d58e1bb/wall.png',
-            2: 'https://github.com/DeepMobb/gameiss/blob/39ab769bf4c9da6d022a6d63e67bf6b94d58e1bb/path.png',
-            3: 'https://github.com/DeepMobb/gameiss/blob/39ab769bf4c9da6d022a6d63e67bf6b94d58e1bb/bank.png',
-            4: 'https://github.com/DeepMobb/gameiss/blob/39ab769bf4c9da6d022a6d63e67bf6b94d58e1bb/shop.png',
-            5: 'https://github.com/DeepMobb/gameiss/blob/39ab769bf4c9da6d022a6d63e67bf6b94d58e1bb/townhouse.png'
+            0: 'https://github.com/DeepMobb/gameiss/blob/39ab769bf4c9da6d022a6d63e67bf6b94d58e1bb/grass.png?raw=true',
+            1: 'https://github.com/DeepMobb/gameiss/blob/39ab769bf4c9da6d022a6d63e67bf6b94d58e1bb/wall.png?raw=true',
+            2: 'https://github.com/DeepMobb/gameiss/blob/39ab769bf4c9da6d022a6d63e67bf6b94d58e1bb/path.png?raw=true',
+            3: 'https://github.com/DeepMobb/gameiss/blob/39ab769bf4c9da6d022a6d63e67bf6b94d58e1bb/bank.png?raw=true',
+            4: 'https://github.com/DeepMobb/gameiss/blob/39ab769bf4c9da6d022a6d63e67bf6b94d58e1bb/shop.png?raw=true',
+            5: 'https://github.com/DeepMobb/gameiss/blob/39ab769bf4c9da6d022a6d63e67bf6b94d58e1bb/townhouse.png?raw=true'
         };
         
         // --- NEW: Camera/Viewport variables ---
@@ -212,7 +212,8 @@
                     }
                 };
                 tileImages[key].onerror = () => {
-                    console.error(`Failed to load image for tile type ${key}`);
+                    console.error(`Failed to load image for tile type ${key} at ${tileSrc[key]}`);
+                    // You might want to stop the game here or show an error
                 };
             });
         }
@@ -468,5 +469,4 @@
     </script>
 </body>
 </html>
-
 
