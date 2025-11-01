@@ -24,19 +24,12 @@
             <h2 id="char-name">Character Name</h2>
             <p id="char-race-gender">Race & Gender</p>
             
-            <!-- This is the visual representation of your character -->
-            <div class.="char-preview-container">
-                <div id="char-preview" class="char-preview">
-                    <!-- NEW "WHOLE CHARACTER" STRUCTURE -->
-                    <div class="char-head">
-                        <div id="char-eyes" class="char-eyes"></div>
-                    </div>
-                    <div class="char-torso">
-                        <div id="char-wings" class="char-wings"></div>
-                    </div>
-                    <div class="char-legs"></div>
-                    <div id="char-trail" class="char-trail"></div>
-                </div>
+            <!-- NEW: This is now an <img> tag -->
+            <div class="char-preview">
+                <img id="char-preview-img" 
+                     src="https://placehold.co/300x400/333/999?text=Loading..." 
+                     alt="Character preview">
+                <!-- Note: Mods are just data now, not visual CSS elements -->
             </div>
             
             <div class="char-stats">
@@ -44,14 +37,20 @@
                 <p>Level: <span id="char-level">1</span></p>
                 <p>Use your <strong>Mouse</strong> to explore the world.</p>
                 <p><strong>Click</strong> on buildings to interact.</p>
+                
+                <!-- NEW: Simple display for mods -->
+                <div id="char-mods-list" style="margin-top: 10px;">
+                    <strong>Modifications:</strong>
+                    <ul id="mods-list" style="font-size: 0.9rem; color: #ccc; margin-left: 20px;">
+                        <li>None</li>
+                    </ul>
+                </div>
             </div>
         </aside>
 
-        <!-- Center Column: Game World (NOW 3D) -->
+        <!-- Center Column: Game World (3D) -->
         <main class="game-world">
-            <!-- Canvas is now for three.js -->
             <canvas id="game-canvas"></canvas>
-            <!-- Hotspot Message Display -->
             <div id="hotspot-message"></div>
         </main>
 
@@ -69,11 +68,8 @@
         <p>Loading Character...</p>
     </div>
 
-    <!-- 
-      JavaScript for loading character data AND running the game
-    -->
     
-    <!-- NEW: Import Three.js and OrbitControls -->
+    <!-- Import Three.js and OrbitControls -->
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
     <script type="importmap">
     {
@@ -89,7 +85,7 @@
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         
-        // NEW: 3D Imports
+        // 3D Imports
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
@@ -117,7 +113,7 @@
         const hotspotMessage = document.getElementById('hotspot-message');
         const canvas = document.getElementById('game-canvas');
         
-        // --- 3D Scene Setup ---
+        // 3D Scene Setup
         let scene, camera, renderer, controls;
         let raycaster, mouse;
         const hotspotObjects = []; // To store clickable buildings
@@ -135,10 +131,9 @@
         // Load Character Function
         async function loadCharacter(uid) {
             const charDocRef = doc(db, "characters", uid);
-            const charDocSnap = await getDoc(charDocSnap.id);
+            const charDocSnap = await getDoc(charDocRef);
 
             if (!charDocSnap.exists()) {
-                // This logic seems to be inverted, let's fix it
                 alert("You must create a character first!");
                 window.location.href = baseURL + 'create.html';
                 return;
@@ -146,24 +141,23 @@
 
             const charData = charDocSnap.data();
 
-            // Populate Character Sheet
+            // --- NEW: Populate Character Sheet with Image ---
             document.getElementById('char-name').textContent = charData.name;
             document.getElementById('char-race-gender').textContent = `${charData.race} (${charData.gender})`;
             document.getElementById('char-level').textContent = charData.level;
+            
+            // Set the preview image
+            document.getElementById('char-preview-img').src = charData.imageUrl;
 
-            const preview = document.getElementById('char-preview');
-            preview.className = 'char-preview'; // Reset classes
-            preview.classList.add(charData.race.toLowerCase().replace('-', '')); // e.g., "glimmersprite"
-
-            // Apply modifications
-            if (charData.modifications.includes('glowing-eyes')) {
-                document.getElementById('char-eyes').style.display = 'block';
-            }
-            if (charData.modifications.includes('spectral-trail')) {
-                document.getElementById('char-trail').style.display = 'block';
-            }
-            if (charData.modifications.includes('larger-wings') && charData.race === 'Skystrider') {
-                document.getElementById('char-wings').style.transform = 'scale(1.5)';
+            // Populate modifications
+            const modsList = document.getElementById('mods-list');
+            if (charData.modifications && charData.modifications.length > 0) {
+                modsList.innerHTML = ''; // Clear "None"
+                charData.modifications.forEach(mod => {
+                    const li = document.createElement('li');
+                    li.textContent = mod.replace(/-/g, ' '); // "glowing-eyes" -> "glowing eyes"
+                    modsList.appendChild(li);
+                });
             }
             
             // --- Initialize Game Once Character is Loaded ---
@@ -175,7 +169,7 @@
             animate3DScene();
         }
 
-        // --- NEW: 3D Game Functions ---
+        // --- 3D Game Functions (Identical to previous version) ---
 
         function init3DScene() {
             // Scene
