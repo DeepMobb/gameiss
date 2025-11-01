@@ -4,51 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mythic Realm - Login</title>
-    <!-- I'm using "styles.css" to match your file name -->
-    <link rel="stylesheet" href="style.css"> 
+    <!-- Use "styles.css" to match your file -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container animated-background">
-        <div class="form-box">
-            <h1>Mythic Realm</h1>
-            <h2 id="form-title">Login</h2>
+        <div class="form-box" id="auth-box">
             
-            <!-- This is now ONE form for both Login and Sign Up -->
+            <h1 id="auth-title">Login</h1>
+            <p>Welcome, adventurer. Your journey begins here.</p>
+            
             <form id="auth-form">
-                <input type="email" id="auth-email" placeholder="Email" required>
-                <input type="password" id="auth-password" placeholder="Password" required>
+                <input type="email" id="email" placeholder="Email" required>
+                <input type="password" id="password" placeholder="Password" required>
+                <!-- "Confirm Password" field, hidden by default -->
+                <input type="password" id="confirm-password" placeholder="Confirm Password" style="display: none;">
                 
-                <!-- This field will be hidden for Login -->
-                <div id="confirm-password-field" class="form-field-hidden">
-                    <input type="password" id="auth-confirm-password" placeholder="Confirm Password">
-                </div>
-
-                <button type="submit" class="btn" id="submit-btn">Login</button>
+                <button type="submit" class="btn" id="auth-button">Login</button>
             </form>
             
-            <p id="auth-error" class="error-message"></p>
+            <p id="toggle-text">Don't have an account? <a href="#" id="toggle-link">Create one</a></p>
             
             <p>... or ...</p>
             
-            <!-- Google Sign-in Button -->
             <button id="google-signin" class="btn btn-google">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google G Logo" width="20" height="20">
                 Sign in with Google
             </button>
-
-            <!-- This link will toggle between Login and Create Account -->
-            <p class="toggle-link">
-                <a href="#" id="toggle-auth-link">Need an account? Create one</a>
-            </p>
+            
+            <p id="auth-error" class="error-message"></p>
         </div>
     </div>
     
     <!-- 
-      JavaScript for Firebase Authentication & Form Toggling
+      JavaScript for Firebase Authentication
     -->
     <script type="module">
         // Import functions from the Firebase SDKs
-        // FIXED: Added 'https://' to the import URLs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { 
             getAuth, 
@@ -59,7 +51,7 @@
             onAuthStateChanged
         } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
-        // ▼▼▼ YOUR FIREBASE CONFIG IS NOW ADDED ▼▼▼
+        // ▼▼▼ YOUR FIREBASE CONFIG ▼▼▼
         const firebaseConfig = {
           apiKey: "AIzaSyBws0s5YOGs4na5sGZCL9CEgmhuU_YiH2M",
           authDomain: "mythic-realm-game.firebaseapp.com",
@@ -68,84 +60,88 @@
           messagingSenderId: "936485093407",
           appId: "1:936485093407:web:ccd92c30a17152e21d152a"
         };
-        // ▲▲▲ YOUR FIREBASE CONFIG IS NOW ADDED ▲▲▲
+        // ▲▲▲ YOUR FIREBASE CONFIG ▲▲▲
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        
-        // Get elements for form toggling
-        const formTitle = document.getElementById('form-title');
+
+        // --- THIS IS THE FIX FOR THE URL ERROR ---
+        const baseURL = "https://deepmobb.github.io/gameiss/";
+
+        // Get elements
         const authForm = document.getElementById('auth-form');
-        const submitBtn = document.getElementById('submit-btn');
-        const confirmPasswordField = document.getElementById('confirm-password-field');
-        const toggleAuthLink = document.getElementById('toggle-auth-link');
-        const authError = document.getElementById('auth-error');
         const googleBtn = document.getElementById('google-signin');
+        const authError = document.getElementById('auth-error');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirm-password');
+        
+        const authTitle = document.getElementById('auth-title');
+        const authButton = document.getElementById('auth-button');
+        const toggleText = document.getElementById('toggle-text');
+        const toggleLink = document.getElementById('toggle-link');
 
-        let isLoginMode = true; // By default, show Login
+        let isLoginMode = true;
 
-        // Function to toggle the form state
-        function toggleMode() {
-            isLoginMode = !isLoginMode; // Flip the mode
-            authError.textContent = ''; // Clear any errors
-
+        // Toggle between Login and Sign-up
+        toggleLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            isLoginMode = !isLoginMode;
+            
             if (isLoginMode) {
-                // Switch to LOGIN mode
-                formTitle.textContent = 'Login';
-                submitBtn.textContent = 'Login';
-                confirmPasswordField.classList.add('form-field-hidden');
-                toggleAuthLink.textContent = 'Need an account? Create one';
+                // Switch to Login
+                authTitle.textContent = 'Login';
+                authButton.textContent = 'Login';
+                confirmPasswordInput.style.display = 'none';
+                toggleText.innerHTML = 'Don\'t have an account? <a href="#" id="toggle-link">Create one</a>';
             } else {
-                // Switch to CREATE ACCOUNT mode
-                formTitle.textContent = 'Create Account';
-                submitBtn.textContent = 'Create Account';
-                confirmPasswordField.classList.remove('form-field-hidden');
-                toggleAuthLink.textContent = 'Already have an account? Login';
+                // Switch to Sign-up
+                authTitle.textContent = 'Create Account';
+                authButton.textContent = 'Create Account';
+                confirmPasswordInput.style.display = 'block';
+                confirmPasswordInput.required = true;
+                toggleText.innerHTML = 'Already have an account? <a href="#" id="toggle-link">Login</a>';
             }
-        }
-
-        // Add click listener to the toggle link
-        toggleAuthLink.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent the link from jumping
-            toggleMode();
+            // Re-add the event listener to the new link
+            document.getElementById('toggle-link').addEventListener('click', arguments.callee);
         });
 
         // Check if user is already logged in
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 // User is signed in, redirect to main menu
-                window.location.href = 'main.html';
+                // FIXED: Used the full, absolute URL
+                window.location.href = baseURL + 'main.html';
             }
         });
 
-        // Handle form submission for EITHER login or sign up
+        // Handle Form Submit (Login or Sign-up)
         authForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const email = document.getElementById('auth-email').value;
-            const password = document.getElementById('auth-password').value;
-            authError.textContent = ''; // Clear previous errors
+            const email = emailInput.value;
+            const password = passwordInput.value;
 
             if (isLoginMode) {
-                // --- LOGIN LOGIC ---
+                // --- Login ---
                 signInWithEmailAndPassword(auth, email, password)
                     .then((userCredential) => {
-                        window.location.href = 'main.html';
+                        // Signed in, redirect (onAuthStateChanged will handle it)
                     })
                     .catch((error) => {
                         authError.textContent = error.message;
                     });
             } else {
-                // --- CREATE ACCOUNT LOGIC ---
-                const confirmPassword = document.getElementById('auth-confirm-password').value;
+                // --- Sign-up ---
+                const confirmPassword = confirmPasswordInput.value;
                 if (password !== confirmPassword) {
-                    authError.textContent = "Passwords do not match.";
-                    return; // Stop execution
+                    authError.textContent = "Passwords do not match";
+                    return;
                 }
-
+                
                 createUserWithEmailAndPassword(auth, email, password)
                     .then((userCredential) => {
-                        window.location.href = 'main.html';
+                        // Signed in, redirect (onAuthStateChanged will handle it)
                     })
                     .catch((error) => {
                         authError.textContent = error.message;
@@ -153,12 +149,12 @@
             }
         });
 
-        // Google Sign-in (no changes here)
+        // Google Sign-in
         googleBtn.addEventListener('click', () => {
             const provider = new GoogleAuthProvider();
             signInWithPopup(auth, provider)
                 .then((result) => {
-                    window.location.href = 'main.html';
+                    // Signed in, redirect (onAuthStateChanged will handle it)
                 })
                 .catch((error) => {
                     authError.textContent = error.message;
@@ -167,5 +163,4 @@
     </script>
 </body>
 </html>
-
 
