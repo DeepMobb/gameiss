@@ -25,23 +25,33 @@
             <p id="char-race-gender">Race & Gender</p>
             
             <!-- This is the visual representation of your character -->
-            <div id="char-preview" class="char-preview">
-                <div id="char-eyes"></div>
-                <div id="char-wings"></div>
-                <div id="char-trail"></div>
+            <div class.="char-preview-container">
+                <div id="char-preview" class="char-preview">
+                    <!-- NEW "WHOLE CHARACTER" STRUCTURE -->
+                    <div class="char-head">
+                        <div id="char-eyes" class="char-eyes"></div>
+                    </div>
+                    <div class="char-torso">
+                        <div id="char-wings" class="char-wings"></div>
+                    </div>
+                    <div class="char-legs"></div>
+                    <div id="char-trail" class="char-trail"></div>
+                </div>
             </div>
             
             <div class="char-stats">
                 <h3>Stats</h3>
                 <p>Level: <span id="char-level">1</span></p>
-                <p>Use <strong>Arrow Keys</strong> to move.</p>
+                <p>Use your <strong>Mouse</strong> to explore the world.</p>
+                <p><strong>Click</strong> on buildings to interact.</p>
             </div>
         </aside>
 
-        <!-- Center Column: Game World -->
+        <!-- Center Column: Game World (NOW 3D) -->
         <main class="game-world">
+            <!-- Canvas is now for three.js -->
             <canvas id="game-canvas"></canvas>
-            <!-- NEW: Hotspot Message Display -->
+            <!-- Hotspot Message Display -->
             <div id="hotspot-message"></div>
         </main>
 
@@ -62,10 +72,26 @@
     <!-- 
       JavaScript for loading character data AND running the game
     -->
+    
+    <!-- NEW: Import Three.js and OrbitControls -->
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/"
+        }
+    }
+    </script>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        
+        // NEW: 3D Imports
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
         // ▼▼▼ YOUR FIREBASE CONFIG ▼▼▼
         const firebaseConfig = {
@@ -88,79 +114,13 @@
         const gameUI = document.getElementById('game-ui');
         const logoutButton = document.getElementById('logout-button');
         const baseURL = "https://deepmobb.github.io/gameiss/";
-
-        // --- Game Canvas Setup ---
+        const hotspotMessage = document.getElementById('hotspot-message');
         const canvas = document.getElementById('game-canvas');
-        const ctx = canvas.getContext('2d');
-        const gameWorldElement = document.querySelector('.game-world');
-        const hotspotMessage = document.getElementById('hotspot-message'); // NEW
         
-        // --- Map and Tile Definitions ---
-        const TILE_SIZE = 40; // The size of one map tile in pixels
-        
-        // Tile Types:
-        // 0: Grass, 1: Wall, 2: Water, 3: Forest, 4: Mountain, 5: Volcano
-        // 6: Town Path, 7: Bank, 8: Shop, 9: Townhouse
-        const tileMap = [
-            [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
-            [4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4],
-            [4, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
-            [4, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
-            [4, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
-            [4, 3, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
-            [4, 3, 0, 0, 1, 6, 6, 6, 6, 1, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
-            [4, 3, 0, 0, 1, 6, 7, 6, 6, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
-            [4, 3, 0, 0, 1, 6, 6, 6, 6, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
-            [4, 3, 0, 0, 1, 6, 8, 6, 9, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
-            [4, 3, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
-            [4, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
-            [4, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
-            [4, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 4],
-            [4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4],
-            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
-            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
-            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
-            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
-            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
-            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
-            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
-            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
-            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
-            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
-            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
-            [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
-            [4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4],
-            [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
-        ];
-        
-        const tileColors = {
-            0: "#228B22", // Grass (dark green)
-            1: "#808080", // Wall (grey)
-            2: "#0000FF", // Water (blue)
-            3: "#006400", // Forest (darker green)
-            4: "#696969", // Mountain (dark grey)
-            5: "#FF4500", // Volcano (red-orange) - Not used in map yet
-            6: "#D2B48C", // Town Path (tan)
-            7: "#FFD700", // Bank (gold)
-            8: "#A0522D", // Shop (sienna/brown)
-            9: "#4682B4"  // Townhouse (steel blue)
-        };
-
-        // Game objects
-        let player = { 
-            x: TILE_SIZE * 2.5, // Start player at tile (2, 2)
-            y: TILE_SIZE * 2.5, 
-            size: 20, 
-            speed: 5 
-        };
-
-        // NEW: Camera object to follow the player
-        let camera = {
-            x: 0,
-            y: 0
-        };
-       
-        // NEW: Timer for hotspot messages
+        // --- 3D Scene Setup ---
+        let scene, camera, renderer, controls;
+        let raycaster, mouse;
+        const hotspotObjects = []; // To store clickable buildings
         let hotspotTimer = null;
 
         // Auth Guard
@@ -175,9 +135,10 @@
         // Load Character Function
         async function loadCharacter(uid) {
             const charDocRef = doc(db, "characters", uid);
-            const charDocSnap = await getDoc(charDocRef);
+            const charDocSnap = await getDoc(charDocSnap.id);
 
             if (!charDocSnap.exists()) {
+                // This logic seems to be inverted, let's fix it
                 alert("You must create a character first!");
                 window.location.href = baseURL + 'create.html';
                 return;
@@ -191,9 +152,10 @@
             document.getElementById('char-level').textContent = charData.level;
 
             const preview = document.getElementById('char-preview');
-            preview.className = 'char-preview';
-            preview.classList.add(charData.race.toLowerCase()); 
+            preview.className = 'char-preview'; // Reset classes
+            preview.classList.add(charData.race.toLowerCase().replace('-', '')); // e.g., "glimmersprite"
 
+            // Apply modifications
             if (charData.modifications.includes('glowing-eyes')) {
                 document.getElementById('char-eyes').style.display = 'block';
             }
@@ -208,190 +170,185 @@
             loader.style.display = 'none';
             gameUI.style.display = 'grid';
             
-            // Set canvas size
-            resizeCanvas();
-            // Start the game loop
-            gameLoop();
+            // Set up and run the 3D scene
+            init3DScene();
+            animate3DScene();
         }
 
-        // --- Game Functions ---
+        // --- NEW: 3D Game Functions ---
 
-        function resizeCanvas() {
-            // Make canvas fill the parent container
-            canvas.width = gameWorldElement.clientWidth;
-            canvas.height = gameWorldElement.clientHeight;
-        }
+        function init3DScene() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2a); // Dark blue-ish background
+            scene.fog = new THREE.Fog(0x1a1a2a, 100, 500);
 
-        // --- UPDATED: Function to draw the map centered on the camera ---
-        function drawMap() {
-            // Calculate starting and ending tiles to draw based on camera
-            const startCol = Math.floor(camera.x / TILE_SIZE);
-            const endCol = Math.ceil((camera.x + canvas.width) / TILE_SIZE);
-            const startRow = Math.floor(camera.y / TILE_SIZE);
-            const endRow = Math.ceil((camera.y + canvas.height) / TILE_SIZE);
+            // Camera
+            const gameWorldElement = document.querySelector('.game-world');
+            const width = gameWorldElement.clientWidth;
+            const height = gameWorldElement.clientHeight;
+            camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+            camera.position.set(50, 60, 100); // Start camera zoomed out
 
-            for (let row = startRow; row < endRow; row++) {
-                for (let col = startCol; col < endCol; col++) {
-                    // Check map boundaries
-                    if (row < 0 || row >= tileMap.length || col < 0 || col >= tileMap[0].length) {
-                        continue;
-                    }
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
 
-                    const tileType = tileMap[row][col];
-                    ctx.fillStyle = tileColors[tileType];
-                    // Draw tile relative to the camera
-                    ctx.fillRect(
-                        Math.floor(col * TILE_SIZE - camera.x), 
-                        Math.floor(row * TILE_SIZE - camera.y), 
-                        TILE_SIZE + 1, // +1 to prevent gaps
-                        TILE_SIZE + 1
-                    );
-                }
-            }
-        }
+            // Controls (Mouse navigation)
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true; // Smooth camera movement
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2.1; // Don't let user go below ground
 
-        // --- UPDATED: Function to draw the player in the center of the screen ---
-        function drawPlayer() {
-            // Player is always drawn in the center of the canvas
-            const playerCanvasX = canvas.width / 2;
-            const playerCanvasY = canvas.height / 2;
-
-            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color'); // 'Amber'
-            ctx.beginPath();
-            ctx.arc(playerCanvasX, playerCanvasY, player.size / 2, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = "#000";
-            ctx.stroke();
-        }
-
-        // --- UPDATED: Game loop with camera logic ---
-        function gameLoop() {
-            // 1. Update Camera
-            // Camera centers on the player, but stops at map edges
-            const mapWidth = tileMap[0].length * TILE_SIZE;
-            const mapHeight = tileMap.length * TILE_SIZE;
-
-            camera.x = player.x - canvas.width / 2;
-            camera.y = player.y - canvas.height / 2;
-
-            // Clamp camera to map boundaries
-            if (camera.x < 0) camera.x = 0;
-            if (camera.y < 0) camera.y = 0;
-            if (camera.x + canvas.width > mapWidth) camera.x = mapWidth - canvas.width;
-            if (camera.y + canvas.height > mapHeight) camera.y = mapHeight - canvas.height;
-
-
-            // 2. Clear the canvas
-            ctx.fillStyle = "#000"; // Fill with black (faster than CSS var)
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // 3. Draw game elements
-            drawMap();
-            drawPlayer();
-
-            // 4. Loop
-            requestAnimationFrame(gameLoop);
-        }
-
-        // --- UPDATED: Collision Detection Function ---
-        function isWalkable(x, y) {
-            const col = Math.floor(x / TILE_SIZE);
-            const row = Math.floor(y / TILE_SIZE);
-
-            // Check map boundaries
-            if (row < 0 || row >= tileMap.length || col < 0 || col >= tileMap[0].length) {
-                return false;
-            }
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x606060);
+            scene.add(ambientLight);
             
-            const tileType = tileMap[row][col];
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+            dirLight.position.set(50, 50, 50);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
 
-            // Check if tile type is walkable
-            // Walkable: 0 (Grass), 6 (Town Path), 7 (Bank), 8 (Shop), 9 (Townhouse)
-            // Not Walkable: 1 (Wall), 2 (Water), 3 (Forest), 4 (Mountain), 5 (Volcano)
-            return tileType === 0 || tileType >= 6;
-        }
+            // Ground Plane
+            const groundGeo = new THREE.PlaneGeometry(500, 500);
+            const groundMat = new THREE.MeshPhongMaterial({ color: 0x228B22 }); // Grass color
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2; // Lay flat
+            ground.receiveShadow = true;
+            scene.add(ground);
 
-        // --- NEW: Hotspot Check Function ---
-        function checkHotspots(x, y) {
-            const col = Math.floor(x / TILE_SIZE);
-            const row = Math.floor(y / TILE_SIZE);
+            // --- Create Hotspot Buildings ---
+            // Bank (Gold)
+            const bank = createBuilding(10, 15, 10, 0xFFD700, -50, 7.5, 0, "Bank");
+            scene.add(bank);
+            hotspotObjects.push(bank);
 
-            if (row < 0 || row >= tileMap.length || col < 0 || col >= tileMap[0].length) {
-                return;
+            // Shop (Brown)
+            const shop = createBuilding(15, 10, 10, 0xA0522D, -20, 5, 0, "Shop");
+            scene.add(shop);
+            hotspotObjects.push(shop);
+
+            // Townhouse (Blue)
+            const townhouse = createBuilding(12, 12, 12, 0x4682B4, 10, 6, 0, "Townhouse");
+            scene.add(townhouse);
+            hotspotObjects.push(townhouse);
+
+            // --- Add environment (trees) ---
+            for (let i = 0; i < 50; i++) {
+                const x = (Math.random() - 0.5) * 400;
+                const z = (Math.random() - 0.5) * 400;
+                // Avoid placing trees in the town area
+                if (x > -70 && x < 30 && z > -20 && z < 20) continue;
+                
+                const tree = createTree(x, z);
+                scene.add(tree);
             }
+
+            // --- Raycaster for Clicking ---
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
             
-            const tileType = tileMap[row][col];
-            let message = "";
-
-            switch (tileType) {
-                case 7: // Bank
-                    message = "You entered the Bank of Mythic Realm.";
-                    break;
-                case 8: // Shop
-                    message = "You found the General Store.";
-                    break;
-                case 9: // Townhouse
-                    message = "You are at the Townhouse. Quests await!";
-                    break;
-            }
-
-            if (message) {
-                // Clear any existing timer
-                if (hotspotTimer) clearTimeout(hotspotTimer);
-                
-                hotspotMessage.textContent = message;
-                hotspotMessage.style.display = 'block';
-                hotspotMessage.style.animation = 'none'; // Reset animation
-                void hotspotMessage.offsetWidth; // Trigger reflow
-                hotspotMessage.style.animation = 'fadeInOut 4s forwards';
-                
-                hotspotTimer = setTimeout(() => {
-                    hotspotMessage.style.display = 'none';
-                }, 4000);
-            }
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize);
+            canvas.addEventListener('click', onCanvasClick);
         }
 
+        function createBuilding(width, height, depth, color, x, y, z, name) {
+            const geo = new THREE.BoxGeometry(width, height, depth);
+            const mat = new THREE.MeshPhongMaterial({ color: color });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true;
+            mesh.name = name; // Store hotspot info
+            return mesh;
+        }
 
-        // --- Event Listeners ---
+        function createTree(x, z) {
+            const trunkGeo = new THREE.CylinderGeometry(1, 1, 10);
+            const trunkMat = new THREE.MeshPhongMaterial({ color: 0x5C3317 });
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            
+            const leavesGeo = new THREE.ConeGeometry(5, 10, 8);
+            const leavesMat = new THREE.MeshPhongMaterial({ color: 0x006400 });
+            const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+            
+            leaves.position.y = 10;
+            
+            const tree = new THREE.Group();
+            tree.add(trunk);
+            tree.add(leaves);
+            
+            tree.position.set(x, 5, z);
+            tree.castShadow = true;
+            return tree;
+        }
+
+        function animate3DScene() {
+            requestAnimationFrame(animate3DScene);
+            controls.update(); // Update camera controls
+            renderer.render(scene, camera);
+        }
         
-        // Resize canvas if window size changes
-        window.addEventListener('resize', resizeCanvas);
-
-        // Player movement (UPDATED with collision and hotspot checks)
-        window.addEventListener('keydown', (e) => {
-            let newX = player.x;
-            let newY = player.y;
-
-            switch(e.key) {
-                case 'ArrowUp':
-                    newY -= player.speed;
-                    break;
-                case 'ArrowDown':
-                    newY += player.speed;
-                    break;
-                case 'ArrowLeft':
-                    newX -= player.speed;
-                    break;
-                case 'ArrowRight':
-                    newX += player.speed;
-                    break;
-                default:
-                    return; // Don't check for hotspots if no movement key
-            }
-
-            // Check horizontal movement
-            if (isWalkable(newX, player.y)) {
-                player.x = newX;
-            }
+        // --- Event Handlers ---
+        
+        function onWindowResize() {
+            const gameWorldElement = document.querySelector('.game-world');
+            const width = gameWorldElement.clientWidth;
+            const height = gameWorldElement.clientHeight;
             
-            // Check vertical movement
-            if (isWalkable(player.x, newY)) {
-                player.y = newY;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        }
+
+        function onCanvasClick(event) {
+            // Calculate mouse position in normalized device coordinates
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            // Update the raycaster
+            raycaster.setFromCamera(mouse, camera);
+
+            // Check for intersections
+            const intersects = raycaster.intersectObjects(hotspotObjects);
+
+            if (intersects.length > 0) {
+                // Clicked on a hotspot!
+                const clickedObject = intersects[0].object;
+                let message = "";
+                
+                switch (clickedObject.name) {
+                    case "Bank":
+                        message = "You clicked the Bank of Mythic Realm.";
+                        break;
+                    case "Shop":
+                        message = "You clicked the General Store.";
+                        break;
+                    case "Townhouse":
+                        message = "You clicked the Townhouse. Quests await!";
+                        break;
+                }
+                
+                showHotspotMessage(message);
             }
+        }
+        
+        function showHotspotMessage(message) {
+            if (hotspotTimer) clearTimeout(hotspotTimer);
             
-            // Check for hotspot after moving
-            checkHotspots(player.x, player.y);
-        });
+            hotspotMessage.textContent = message;
+            hotspotMessage.style.display = 'block';
+            hotspotMessage.style.animation = 'none'; // Reset animation
+            void hotspotMessage.offsetWidth; // Trigger reflow
+            hotspotMessage.style.animation = 'fadeInOut 4s forwards';
+            
+            hotspotTimer = setTimeout(() => {
+                hotspotMessage.style.display = 'none';
+            }, 4000);
+        }
 
         // Logout button
         logoutButton.addEventListener('click', () => {
