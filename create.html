@@ -84,14 +84,19 @@
             <!-- COLUMN 2: The Preview -->
             <div class="preview-column">
                 <div class="char-preview-container">
-                    <p id="preview-text">Select a race to preview your hero</p>
+                    <p id="preview-text">Select a race and gender</p>
                     
-                    <div class="char-preview">
-                        <img id="char-preview-img" 
-                             src="https://placehold.co/300x400/333/999?text=Select+a+Race" 
-                             alt="Character preview">
+                    <!-- REVERTED to CSS Block Character -->
+                    <div id="char-preview" class="char-preview">
+                        <div class="char-head">
+                            <div id="char-eyes" class="char-eyes"></div>
+                        </div>
+                        <div class="char-torso">
+                            <div id="char-wings" class="char-wings"></div>
+                        </div>
+                        <div class="char-legs"></div>
+                        <div id="char-trail" class="char-trail"></div>
                     </div>
-                    <p id="preview-note" style="font-size: 0.8rem; color: #777;"></p>
                 </div>
             </div>
 
@@ -127,19 +132,24 @@
         const baseURL = "https://deepmobb.github.io/gameiss/";
         let currentUserId = null;
 
-        // Preview Image Elements
-        const previewImg = document.getElementById('char-preview-img');
+        // --- CSS Preview Elements ---
+        const previewBox = document.getElementById('char-preview');
         const previewText = document.getElementById('preview-text');
-        const previewNote = document.getElementById('preview-note');
         const raceRadios = document.querySelectorAll('input[name="race"]');
+        const genderRadios = document.querySelectorAll('input[name="gender"]'); // NEW
+        
+        // Modification Checkboxes
+        const modEyes = document.getElementById('mod-eyes');
+        const modTrail = document.getElementById('mod-trail');
+        const modWings = document.getElementById('mod-wings');
 
-        // Placeholder Image URLs
-        const raceImageMap = {
-            "Glimmer-sprite": "https://github.com/DeepMobb/gameiss/blob/main/glimmer-sprite.png?raw=true",
-            "Skystrider": "https://github.com/DeepMobb/gameiss/blob/main/skystrider.png?raw=true",
-            "Aura-wisp": "https://github.com/DeepMobb/gameiss/blob/main/Aura-wisp.png?raw=true"
-        };
-        const defaultImage = "https://placehold.co/300x400/333/999?text=Select+a+Race";
+        // Character Parts
+        const charEyes = document.getElementById('char-eyes');
+        const charTrail = document.getElementById('char-trail');
+        const charWings = document.getElementById('char-wings');
+
+        let selectedRace = "";
+        let selectedGender = "";
 
         // Check if user is logged in
         onAuthStateChanged(auth, (user) => {
@@ -149,21 +159,57 @@
                 window.location.href = baseURL + 'index.html';
             }
         });
+        
+        function updatePreview() {
+            // Reset classes
+            previewBox.className = 'char-preview';
+            
+            if (selectedRace) {
+                const raceClass = selectedRace.toLowerCase().replace('-', ''); // "glimmersprite"
+                previewBox.classList.add(raceClass);
+            }
+            if (selectedGender) {
+                previewBox.classList.add(selectedGender.toLowerCase()); // "male" or "female"
+            }
+            
+            // Update text
+            if (selectedRace && selectedGender) {
+                previewText.textContent = `Previewing: ${selectedGender} ${selectedRace}`;
+            } else {
+                previewText.textContent = "Select a race and gender";
+            }
+            
+            // Update mods
+            charEyes.style.display = modEyes.checked ? 'block' : 'none';
+            charTrail.style.display = modTrail.checked ? 'block' : 'none';
+            
+            charWings.style.display = 'none'; // Hide by default
+            if (selectedRace === 'Skystrider') {
+                charWings.style.display = 'block';
+                charWings.style.transform = modWings.checked ? 'scale(1.5)' : 'scale(1)';
+            }
+        }
 
         // Event listener for race selection
         raceRadios.forEach(radio => {
             radio.addEventListener('change', () => {
-                const raceName = radio.value;
-                previewImg.src = raceImageMap[raceName] || defaultImage;
-                previewText.textContent = `Previewing: ${raceName}`;
-                
-                if (raceImageMap[raceName].includes('placehold.co')) {
-                    previewNote.textContent = "This is a placeholder image.";
-                } else {
-                    previewNote.textContent = "";
-                }
+                selectedRace = radio.value;
+                updatePreview();
             });
         });
+        
+        // NEW: Event listener for gender selection
+        genderRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                selectedGender = radio.value;
+                updatePreview();
+            });
+        });
+
+        // Event listeners for modifications
+        modEyes.addEventListener('change', updatePreview);
+        modTrail.addEventListener('change', updatePreview);
+        modWings.addEventListener('change', updatePreview);
 
 
         // Listen for form submission
@@ -185,7 +231,6 @@
                 mods.push(checkbox.value);
             });
 
-            // --- NEW: Add gold and inventory to new characters ---
             const characterData = {
                 name: charName,
                 gender: gender,
@@ -193,9 +238,9 @@
                 modifications: mods,
                 level: 1,
                 createdAt: new Date(),
-                imageUrl: raceImageMap[race] || defaultImage,
-                gold: 100,         // <-- NEW
-                inventory: []      // <-- NEW
+                // REMOVED imageUrl
+                gold: 100,
+                inventory: []
             };
 
             try {
