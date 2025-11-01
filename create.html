@@ -4,13 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Character - Mythic Realm</title>
-    <!-- Use "styles.css" to match your file -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <div class="form-box creation-form">
             <h1>Create Your Hero</h1>
+            
+            <!-- NEW: Character Preview Area -->
+            <div class="char-preview-container">
+                <div id="char-preview" class="char-preview">
+                    <!-- These are the same as game.html -->
+                    <div id="char-eyes"></div>
+                    <div id="char-wings"></div>
+                    <div id="char-trail"></div>
+                </div>
+                <p id="preview-text">Select a race to preview your hero</p>
+            </div>
+            <hr>
+
             <form id="character-create-form">
                 
                 <!-- Character Name -->
@@ -103,12 +115,15 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- THIS IS THE FIX FOR THE URL ERROR ---
-        const baseURL = "https://deepmobb.github.io/gameiss/";
-
         // Get elements
         const createForm = document.getElementById('character-create-form');
+        const baseURL = "https://deepmobb.github.io/gameiss/";
         let currentUserId = null; // Variable to store the user's ID
+
+        // --- NEW: Preview Elements ---
+        const previewBox = document.getElementById('char-preview');
+        const previewText = document.getElementById('preview-text');
+        const raceRadios = document.querySelectorAll('input[name="race"]');
 
         // Check if user is logged in
         onAuthStateChanged(auth, (user) => {
@@ -117,9 +132,24 @@
                 currentUserId = user.uid;
             } else {
                 // User is signed out, redirect to login
-                // FIXED: Used the full, absolute URL
                 window.location.href = baseURL + 'index.html';
             }
+        });
+
+        // --- NEW: Event listener for race selection ---
+        raceRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                // Get the value (e.g., "Glimmer-sprite") and clean it for the class
+                const raceClass = radio.value.toLowerCase(); // "glimmer-sprite"
+                
+                // Reset the class list
+                previewBox.className = 'char-preview';
+                // Add the new class
+                previewBox.classList.add(raceClass);
+                
+                // Update the text
+                previewText.textContent = `Previewing: ${radio.value}`;
+            });
         });
 
         // Listen for form submission
@@ -154,11 +184,13 @@
 
             try {
                 // Save the data to Firestore
+                // We use the user's ID (currentUserId) as the document ID
+                // This links the character directly to the user
                 await setDoc(doc(db, "characters", currentUserId), characterData);
                 
                 // Success! Redirect to the main menu
-                alert("Character created!");
-                // FIXED: Used the full, absolute URL
+                // Using alert() temporarily as custom modals aren't built
+                alert("Character created!"); 
                 window.location.href = baseURL + 'main.html';
 
             } catch (error) {
