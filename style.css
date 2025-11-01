@@ -364,7 +364,7 @@ input[type="radio"]:checked + .race-label .race-preview {
     position: relative;
     border: 1px solid #444;
     border-radius: 8px;
-    background: #111;
+    background: var(--form-bg);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -444,4 +444,5 @@ input[type="radio"]:checked + .race-label .race-preview {
     85% { opacity: 1; transform: translate(-50%, 0); }
     100% { opacity: 0; transform: translate(-50%, -10px); }
 }
+
 
