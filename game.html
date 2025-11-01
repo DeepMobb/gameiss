@@ -34,15 +34,14 @@
             <div class="char-stats">
                 <h3>Stats</h3>
                 <p>Level: <span id="char-level">1</span></p>
-                <!-- You can add more stats here later -->
+                <p>Use <strong>Arrow Keys</strong> to move.</p>
             </div>
         </aside>
 
         <!-- Center Column: Game World -->
         <main class="game-world">
-            <h1>Game World</h1>
-            <p>Your adventure begins here. The world is empty for now...</p>
-            <!-- This is where the main game canvas or content will go -->
+            <!-- The "empty" text is replaced by the canvas -->
+            <canvas id="game-canvas"></canvas>
         </main>
 
         <!-- Right Column: Game Menu -->
@@ -60,7 +59,7 @@
     </div>
 
     <!-- 
-      JavaScript for loading character data
+      JavaScript for loading character data AND running the game
     -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
@@ -89,13 +88,20 @@
         const logoutButton = document.getElementById('logout-button');
         const baseURL = "https://deepmobb.github.io/gameiss/";
 
+        // --- NEW: Game Canvas Setup ---
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const gameWorldElement = document.querySelector('.game-world');
+        
+        // Game objects
+        let player = { x: 50, y: 50, size: 20, speed: 5 };
+        const gridSize = 40;
+
         // Auth Guard
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is logged in, load their character
                 loadCharacter(user.uid);
             } else {
-                // No user, redirect to login
                 window.location.href = baseURL + 'index.html';
             }
         });
@@ -106,27 +112,22 @@
             const charDocSnap = await getDoc(charDocRef);
 
             if (!charDocSnap.exists()) {
-                // User is logged in but has no character,
-                // send them to the creation screen
                 alert("You must create a character first!");
                 window.location.href = baseURL + 'create.html';
                 return;
             }
 
-            // Character exists, populate the UI
             const charData = charDocSnap.data();
 
+            // Populate Character Sheet
             document.getElementById('char-name').textContent = charData.name;
             document.getElementById('char-race-gender').textContent = `${charData.race} (${charData.gender})`;
             document.getElementById('char-level').textContent = charData.level;
 
-            // --- Update Character Visuals ---
             const preview = document.getElementById('char-preview');
-            // Remove old classes, add new one
-            preview.className = 'char-preview'; // Reset
-            preview.classList.add(charData.race.toLowerCase()); // e.g., 'glimmer-sprite'
+            preview.className = 'char-preview';
+            preview.classList.add(charData.race.toLowerCase()); 
 
-            // Check for modifications
             if (charData.modifications.includes('glowing-eyes')) {
                 document.getElementById('char-eyes').style.display = 'block';
             }
@@ -137,10 +138,93 @@
                 document.getElementById('char-wings').style.transform = 'scale(1.5)';
             }
             
-            // Show the game UI, hide the loader
+            // --- NEW: Initialize Game Once Character is Loaded ---
             loader.style.display = 'none';
-            gameUI.style.display = 'grid'; // Use 'grid' to match our new CSS
+            gameUI.style.display = 'grid';
+            
+            // Set canvas size
+            resizeCanvas();
+            // Start the game loop
+            gameLoop();
         }
+
+        // --- NEW: Game Functions ---
+
+        function resizeCanvas() {
+            // Make canvas fill the parent container
+            canvas.width = gameWorldElement.clientWidth;
+            canvas.height = gameWorldElement.clientHeight;
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = "#333"; // Dark grid lines
+            ctx.lineWidth = 1;
+
+            for (let x = 0; x <= canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        function drawPlayer() {
+            // --- FIX: Correctly get the CSS variable value ---
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color'); // Use 'Amber' color
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#000";
+            ctx.stroke();
+        }
+
+        function gameLoop() {
+            // Clear the canvas
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-color'); // Use 'Dark background'
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw game elements
+            drawGrid();
+            drawPlayer();
+
+            // Loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- NEW: Event Listeners ---
+        
+        // Resize canvas if window size changes
+        window.addEventListener('resize', resizeCanvas);
+
+        // Player movement
+        window.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowUp':
+                    player.y -= player.speed;
+                    break;
+                case 'ArrowDown':
+                    player.y += player.speed;
+                    break;
+                case 'ArrowLeft':
+                    player.x -= player.speed;
+                    break;
+                case 'ArrowRight':
+                    player.x += player.speed;
+                    break;
+            }
+
+            // Simple boundary collision
+            if (player.x < player.size / 2) player.x = player.size / 2;
+            if (player.y < player.size / 2) player.y = player.size / 2;
+            if (player.x > canvas.width - player.size / 2) player.x = canvas.width - player.size / 2;
+            if (player.y > canvas.height - player.size / 2) player.y = canvas.height - player.size / 2;
+        });
 
         // Logout button
         logoutButton.addEventListener('click', () => {
@@ -151,3 +235,4 @@
     </script>
 </body>
 </html>
+
