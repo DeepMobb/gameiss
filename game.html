@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mythic Realm - Game</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Simple loader for this page */
+        #loader {
+            color: white;
+            font-size: 1.5rem;
+            text-align: center;
+            margin-top: 40vh;
+        }
+    </style>
+</head>
+<body>
+    <!-- This container will be hidden until data is loaded -->
+    <div class="game-container" id="game-ui" style="display: none;">
+        
+        <!-- Left Column: Character Sheet -->
+        <aside class="char-sheet">
+            <h2 id="char-name">Character Name</h2>
+            <p id="char-race-gender">Race & Gender</p>
+            
+            <!-- This is the visual representation of your character -->
+            <div id="char-preview" class="char-preview">
+                <div id="char-eyes"></div>
+                <div id="char-wings"></div>
+                <div id="char-trail"></div>
+            </div>
+            
+            <div class="char-stats">
+                <h3>Stats</h3>
+                <p>Level: <span id="char-level">1</span></p>
+                <!-- You can add more stats here later -->
+            </div>
+        </aside>
+
+        <!-- Center Column: Game World -->
+        <main class="game-world">
+            <h1>Game World</h1>
+            <p>Your adventure begins here. The world is empty for now...</p>
+            <!-- This is where the main game canvas or content will go -->
+        </main>
+
+        <!-- Right Column: Game Menu -->
+        <nav class="game-menu">
+            <h3>Menu</h3>
+            <button class="btn btn-secondary">Inventory</button>
+            <button class="btn btn-secondary">Settings</button>
+            <button id="logout-button" class="btn btn-secondary">Logout</button>
+        </nav>
+    </div>
+
+    <!-- Loader, shown by default -->
+    <div id="loader">
+        <p>Loading Character...</p>
+    </div>
+
+    <!-- 
+      JavaScript for loading character data
+    -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        // ▼▼▼ YOUR FIREBASE CONFIG ▼▼▼
+        const firebaseConfig = {
+          apiKey: "AIzaSyBws0s5YOGs4na5sGZCL9CEgmhuU_YiH2M",
+          authDomain: "mythic-realm-game.firebaseapp.com",
+          projectId: "mythic-realm-game",
+          storageBucket: "mythic-realm-game.firebasestorage.app",
+          messagingSenderId: "936485093407",
+          appId: "1:936485093407:web:ccd92c30a17152e21d152a"
+        };
+        // ▲▲▲ YOUR FIREBASE CONFIG ▲▲▲
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Get elements
+        const loader = document.getElementById('loader');
+        const gameUI = document.getElementById('game-ui');
+        const logoutButton = document.getElementById('logout-button');
+        const baseURL = "https://deepmobb.github.io/gameiss/";
+
+        // Auth Guard
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is logged in, load their character
+                loadCharacter(user.uid);
+            } else {
+                // No user, redirect to login
+                window.location.href = baseURL + 'index.html';
+            }
+        });
+
+        // Load Character Function
+        async function loadCharacter(uid) {
+            const charDocRef = doc(db, "characters", uid);
+            const charDocSnap = await getDoc(charDocRef);
+
+            if (!charDocSnap.exists()) {
+                // User is logged in but has no character,
+                // send them to the creation screen
+                alert("You must create a character first!");
+                window.location.href = baseURL + 'create.html';
+                return;
+            }
+
+            // Character exists, populate the UI
+            const charData = charDocSnap.data();
+
+            document.getElementById('char-name').textContent = charData.name;
+            document.getElementById('char-race-gender').textContent = `${charData.race} (${charData.gender})`;
+            document.getElementById('char-level').textContent = charData.level;
+
+            // --- Update Character Visuals ---
+            const preview = document.getElementById('char-preview');
+            // Remove old classes, add new one
+            preview.className = 'char-preview'; // Reset
+            preview.classList.add(charData.race.toLowerCase()); // e.g., 'glimmer-sprite'
+
+            // Check for modifications
+            if (charData.modifications.includes('glowing-eyes')) {
+                document.getElementById('char-eyes').style.display = 'block';
+            }
+            if (charData.modifications.includes('spectral-trail')) {
+                document.getElementById('char-trail').style.display = 'block';
+            }
+            if (charData.modifications.includes('larger-wings') && charData.race === 'Skystrider') {
+                document.getElementById('char-wings').style.transform = 'scale(1.5)';
+            }
+            
+            // Show the game UI, hide the loader
+            loader.style.display = 'none';
+            gameUI.style.display = 'grid'; // Use 'grid' to match our new CSS
+        }
+
+        // Logout button
+        logoutButton.addEventListener('click', () => {
+            signOut(auth).catch((error) => {
+                console.error("Error signing out: ", error);
+            });
+        });
+    </script>
+</body>
+</html>
