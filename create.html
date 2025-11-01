@@ -66,7 +66,6 @@
                     <!-- Physical Modifications -->
                     <label>Physical Modifications:</label>
                     <div class="checkbox-group">
-                        <!-- NOTE: These are now just data, the image logic is handled separately -->
                         <input type="checkbox" id="mod-eyes" name="mod" value="glowing-eyes">
                         <label for="mod-eyes">Glowing Eyes</label>
                         
@@ -87,7 +86,6 @@
                 <div class="char-preview-container">
                     <p id="preview-text">Select a race to preview your hero</p>
                     
-                    <!-- NEW: This is now an <img> tag -->
                     <div class="char-preview">
                         <img id="char-preview-img" 
                              src="https://placehold.co/300x400/333/999?text=Select+a+Race" 
@@ -126,51 +124,43 @@
 
         // Get elements
         const createForm = document.getElementById('character-create-form');
-        const baseURL = "https://deepobb.github.io/gameiss/";
-        let currentUserId = null; // Variable to store the user's ID
+        const baseURL = "https://deepmobb.github.io/gameiss/";
+        let currentUserId = null;
 
-        // --- NEW: Preview Image Elements ---
+        // Preview Image Elements
         const previewImg = document.getElementById('char-preview-img');
         const previewText = document.getElementById('preview-text');
         const previewNote = document.getElementById('preview-note');
         const raceRadios = document.querySelectorAll('input[name="race"]');
 
-        // --- NEW: Placeholder Image URLs ---
-        // You MUST replace these with your own image URLs
+        // Placeholder Image URLs
         const raceImageMap = {
             "Glimmer-sprite": "https://github.com/DeepMobb/gameiss/blob/main/glimmer-sprite.png?raw=true",
             "Skystrider": "https://github.com/DeepMobb/gameiss/blob/main/skystrider.png?raw=true",
-            "Aura-wisp": "https://github.com/DeepMobb/gameiss/blob/main/Aura-wisp.png?raw=true" // Using a link to your example
+            "Aura-wisp": "https://github.com/DeepMobb/gameiss/blob/main/Aura-wisp.png?raw=true"
         };
         const defaultImage = "https://placehold.co/300x400/333/999?text=Select+a+Race";
 
         // Check if user is logged in
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is signed in
                 currentUserId = user.uid;
             } else {
-                // User is signed out, redirect to login
                 window.location.href = baseURL + 'index.html';
             }
         });
 
-        // --- NEW: Event listener for race selection ---
+        // Event listener for race selection
         raceRadios.forEach(radio => {
             radio.addEventListener('change', () => {
                 const raceName = radio.value;
-                
-                // Set the image source
                 previewImg.src = raceImageMap[raceName] || defaultImage;
-                
-                // Update the text
                 previewText.textContent = `Previewing: ${raceName}`;
                 
-                // Add a note about placeholders
                 if (raceImageMap[raceName].includes('placehold.co')) {
                     previewNote.textContent = "This is a placeholder image.";
                 } else {
-                    previewNote.textContent = ""; // Clear note if it's a real image
+                    previewNote.textContent = "";
                 }
             });
         });
@@ -178,7 +168,7 @@
 
         // Listen for form submission
         createForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); // Stop the form from reloading the page
+            e.preventDefault();
             
             if (!currentUserId) {
                 alert("Error: No user logged in.");
@@ -190,29 +180,28 @@
             const gender = document.querySelector('input[name="gender"]:checked').value;
             const race = document.querySelector('input[name="race"]:checked').value;
             
-            // Get all checked modifications
             const mods = [];
             document.querySelectorAll('input[name="mod"]:checked').forEach((checkbox) => {
                 mods.push(checkbox.value);
             });
 
-            // Create a data object
+            // --- NEW: Add gold and inventory to new characters ---
             const characterData = {
                 name: charName,
                 gender: gender,
                 race: race,
                 modifications: mods,
-                level: 1, // Start every new character at level 1
+                level: 1,
                 createdAt: new Date(),
-                // NEW: Save the URL of the chosen character image
-                imageUrl: raceImageMap[race] || defaultImage 
+                imageUrl: raceImageMap[race] || defaultImage,
+                gold: 100,         // <-- NEW
+                inventory: []      // <-- NEW
             };
 
             try {
                 // Save the data to Firestore
                 await setDoc(doc(db, "characters", currentUserId), characterData);
                 
-                // Success! Redirect to the main menu
                 alert("Character created!"); 
                 window.location.href = baseURL + 'main.html';
 
@@ -224,5 +213,4 @@
     </script>
 </body>
 </html>
-
 
