@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Character - Mythic Realm</title>
+    <!-- Use "styles.css" to match your file -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,12 +13,14 @@
             <h1>Create Your Hero</h1>
             <form id="character-create-form">
                 
+                <!-- Character Name -->
                 <label for="char-name">Character Name:</label>
                 <input type="text" id="char-name" placeholder="Max 8 letters, no numbers" 
                        maxlength="8" pattern="[A-Za-z]{1,8}" 
                        title="Max 8 letters, no numbers or special characters." required>
                 <hr>
 
+                <!-- Gender Selection -->
                 <label>Gender:</label>
                 <div class="radio-group">
                     <input type="radio" id="gender-male" name="gender" value="male" required>
@@ -27,8 +30,10 @@
                 </div>
                 <hr>
 
+                <!-- Mythical Race Selection -->
                 <label>Mythical Race:</label>
                 <div class="radio-group race-selection">
+                    <!-- 1. Short and Slim -->
                     <input type="radio" id="race-sprite" name="race" value="Glimmer-sprite" required>
                     <label for="race-sprite" class="race-label">
                         <div class="race-preview sprite"></div>
@@ -36,6 +41,7 @@
                         <p>Short, slim, and uncannily fast. Fey tricksters of the hidden world.</p>
                     </label>
                     
+                    <!-- 2. Big with Wings -->
                     <input type="radio" id="race-skystrider" name="race" value="Skystrider" required>
                     <label for="race-skystrider" class="race-label">
                         <div class="race-preview skystrider"></div>
@@ -43,6 +49,7 @@
                         <p>A massive, winged race, bound to the mountaintops and the open sky.</p>
                     </label>
                     
+                    <!-- 3. Part Ghost -->
                     <input type="radio" id="race-wisp" name="race" value="Aura-wisp" required>
                     <label for="race-wisp" class="race-label">
                         <div class="race-preview wisp"></div>
@@ -52,6 +59,7 @@
                 </div>
                 <hr>
 
+                <!-- Physical Modifications -->
                 <label>Physical Modifications:</label>
                 <div class="checkbox-group">
                     <input type="checkbox" id="mod-eyes" name="mod" value="glowing-eyes">
@@ -70,27 +78,33 @@
         </div>
     </div>
     
+    <!-- 
+      JavaScript for saving character data to Firestore
+    -->
     <script type="module">
         // Import functions from the Firebase SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // ▼▼▼ PASTE YOUR FIREBASE CONFIG OBJECT HERE ▼▼▼
+        // ▼▼▼ YOUR FIREBASE CONFIG ▼▼▼
         const firebaseConfig = {
-          apiKey: "YOUR_API_KEY",
-          authDomain: "YOUR_AUTH_DOMAIN",
-          projectId: "YOUR_PROJECT_ID",
-          storageBucket: "YOUR_STORAGE_BUCKET",
-          messagingSenderId: "YOUR_SENDER_ID",
-          appId: "YOUR_APP_ID"
+          apiKey: "AIzaSyBws0s5YOGs4na5sGZCL9CEgmhuU_YiH2M",
+          authDomain: "mythic-realm-game.firebaseapp.com",
+          projectId: "mythic-realm-game",
+          storageBucket: "mythic-realm-game.firebasestorage.app",
+          messagingSenderId: "936485093407",
+          appId: "1:936485093407:web:ccd92c30a17152e21d152a"
         };
-        // ▲▲▲ PASTE YOUR FIREBASE CONFIG OBJECT HERE ▲▲▲
+        // ▲▲▲ YOUR FIREBASE CONFIG ▲▲▲
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        // --- THIS IS THE FIX FOR THE URL ERROR ---
+        const baseURL = "https://deepmobb.github.io/gameiss/";
 
         // Get elements
         const createForm = document.getElementById('character-create-form');
@@ -103,7 +117,8 @@
                 currentUserId = user.uid;
             } else {
                 // User is signed out, redirect to login
-                window.location.href = 'index.html';
+                // FIXED: Used the full, absolute URL
+                window.location.href = baseURL + 'index.html';
             }
         });
 
@@ -139,13 +154,12 @@
 
             try {
                 // Save the data to Firestore
-                // We use the user's ID (currentUserId) as the document ID
-                // This links the character directly to the user
                 await setDoc(doc(db, "characters", currentUserId), characterData);
                 
                 // Success! Redirect to the main menu
                 alert("Character created!");
-                window.location.href = 'main.html';
+                // FIXED: Used the full, absolute URL
+                window.location.href = baseURL + 'main.html';
 
             } catch (error) {
                 console.error("Error writing document: ", error);
@@ -155,3 +169,4 @@
     </script>
 </body>
 </html>
+
