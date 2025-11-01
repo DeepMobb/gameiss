@@ -88,15 +88,52 @@
         const logoutButton = document.getElementById('logout-button');
         const baseURL = "https://deepmobb.github.io/gameiss/";
 
-        // --- NEW: Game Canvas Setup ---
+        // --- Game Canvas Setup ---
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
         const gameWorldElement = document.querySelector('.game-world');
         
-        // Game objects
-        let player = { x: 50, y: 50, size: 20, speed: 5 };
-        const gridSize = 40;
+        // --- NEW: Map and Tile Definitions ---
+        const TILE_SIZE = 40; // The size of one map tile in pixels
+        // 0 = Grass (walkable), 1 = Wall (solid), 2 = Water (solid)
+        const tileMap = [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 1, 0, 1],
+            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 1, 0, 1],
+            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1],
+            [1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1],
+            [1, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+            [1, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+            [1, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        ];
+        
+        const tileColors = {
+            0: "#228B22", // Grass (dark green)
+            1: "#808080", // Wall (grey)
+            2: "#0000FF"  // Water (blue)
+        };
 
+        // Game objects
+        // Start player at tile (1, 1)
+        let player = { 
+            x: TILE_SIZE * 1.5, 
+            y: TILE_SIZE * 1.5, 
+            size: 20, 
+            speed: 5 
+        };
+       
         // Auth Guard
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -138,7 +175,7 @@
                 document.getElementById('char-wings').style.transform = 'scale(1.5)';
             }
             
-            // --- NEW: Initialize Game Once Character is Loaded ---
+            // --- Initialize Game Once Character is Loaded ---
             loader.style.display = 'none';
             gameUI.style.display = 'grid';
             
@@ -148,7 +185,7 @@
             gameLoop();
         }
 
-        // --- NEW: Game Functions ---
+        // --- Game Functions ---
 
         function resizeCanvas() {
             // Make canvas fill the parent container
@@ -156,27 +193,19 @@
             canvas.height = gameWorldElement.clientHeight;
         }
 
-        function drawGrid() {
-            ctx.strokeStyle = "#333"; // Dark grid lines
-            ctx.lineWidth = 1;
-
-            for (let x = 0; x <= canvas.width; x += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
-                ctx.stroke();
-            }
-            for (let y = 0; y <= canvas.height; y += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y);
-                ctx.stroke();
+        // --- NEW: Function to draw the tile-based map ---
+        function drawMap() {
+            for (let row = 0; row < tileMap.length; row++) {
+                for (let col = 0; col < tileMap[row].length; col++) {
+                    const tileType = tileMap[row][col];
+                    ctx.fillStyle = tileColors[tileType];
+                    ctx.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
             }
         }
 
         function drawPlayer() {
-            // --- FIX: Correctly get the CSS variable value ---
-            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color'); // Use 'Amber' color
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color'); // 'Amber'
             ctx.beginPath();
             ctx.arc(player.x, player.y, player.size / 2, 0, Math.PI * 2);
             ctx.fill();
@@ -186,40 +215,72 @@
 
         function gameLoop() {
             // Clear the canvas
-            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-color'); // Use 'Dark background'
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-color');
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Draw game elements
-            drawGrid();
+            drawMap(); // Replaced drawGrid()
             drawPlayer();
 
             // Loop
             requestAnimationFrame(gameLoop);
         }
 
-        // --- NEW: Event Listeners ---
+        // --- NEW: Collision Detection Function ---
+        function isWalkable(x, y) {
+            // Get the tile the player's center is on
+            const col = Math.floor(x / TILE_SIZE);
+            const row = Math.floor(y / TILE_SIZE);
+
+            // Check map boundaries
+            if (row < 0 || row >= tileMap.length || col < 0 || col >= tileMap[0].length) {
+                return false;
+            }
+
+            // Check if tile type is walkable (0 = Grass)
+            return tileMap[row][col] === 0;
+        }
+
+        // --- Event Listeners ---
         
         // Resize canvas if window size changes
         window.addEventListener('resize', resizeCanvas);
 
-        // Player movement
+        // Player movement (UPDATED with collision)
         window.addEventListener('keydown', (e) => {
+            let newX = player.x;
+            let newY = player.y;
+
             switch(e.key) {
                 case 'ArrowUp':
-                    player.y -= player.speed;
+                    newY -= player.speed;
                     break;
                 case 'ArrowDown':
-                    player.y += player.speed;
+                    newY += player.speed;
                     break;
                 case 'ArrowLeft':
-                    player.x -= player.speed;
+                    newX -= player.speed;
                     break;
                 case 'ArrowRight':
-                    player.x += player.speed;
+                    newX += player.speed;
                     break;
             }
 
-            // Simple boundary collision
+            // --- Check for collision BEFORE moving ---
+            // We check collision on both the new X and new Y separately
+            // This allows sliding along walls
+            
+            // Check horizontal movement
+            if (isWalkable(newX, player.y)) {
+                player.x = newX;
+            }
+            
+            // Check vertical movement
+            if (isWalkable(player.x, newY)) {
+                player.y = newY;
+            }
+
+            // Simple boundary collision (redundant with map, but good fallback)
             if (player.x < player.size / 2) player.x = player.size / 2;
             if (player.y < player.size / 2) player.y = player.size / 2;
             if (player.x > canvas.width - player.size / 2) player.x = canvas.width - player.size / 2;
