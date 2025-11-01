@@ -4,11 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Main Menu - Mythic Realm</title>
+    <!-- Use "styles.css" to match your file -->
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Added a simple style for the loader */
+        #loader {
+            color: white;
+            font-size: 1.5rem;
+            text-align: center;
+            margin-top: 40vh;
+        }
+    </style>
 </head>
 <body>
     <div class="container animated-background">
-        <div class="main-menu">
+        <!-- The main menu is hidden by default -->
+        <div class="main-menu" id="main-menu-content" style="display: none;">
             <h1>Welcome, <span id="player-name">Adventurer</span></h1>
             <p>Your destiny awaits.</p>
             
@@ -16,24 +27,32 @@
             
             <button id="logout-button" class="btn btn-secondary">Logout</button>
         </div>
+        
+        <!-- The loader is shown by default -->
+        <div id="loader">
+            <p>Loading...</p>
+        </div>
     </div>
 
+    <!-- 
+      JavaScript for checking auth state and character data
+    -->
     <script type="module">
         // Import functions from the Firebase SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // ▼▼▼ PASTE YOUR FIREBASE CONFIG OBJECT HERE ▼▼▼
+        // ▼▼▼ YOUR FIREBASE CONFIG ▼▼▼
         const firebaseConfig = {
-          apiKey: "YOUR_API_KEY",
-          authDomain: "YOUR_AUTH_DOMAIN",
-          projectId: "YOUR_PROJECT_ID",
-          storageBucket: "YOUR_STORAGE_BUCKET",
-          messagingSenderId: "YOUR_SENDER_ID",
-          appId: "YOUR_APP_ID"
+          apiKey: "AIzaSyBws0s5YOGs4na5sGZCL9CEgmhuU_YiH2M",
+          authDomain: "mythic-realm-game.firebaseapp.com",
+          projectId: "mythic-realm-game",
+          storageBucket: "mythic-realm-game.firebasestorage.app",
+          messagingSenderId: "936485093407",
+          appId: "1:936485093407:web:ccd92c30a17152e21d152a"
         };
-        // ▲▲▲ PASTE YOUR FIREBASE CONFIG OBJECT HERE ▲▲▲
+        // ▲▲▲ YOUR FIREBASE CONFIG ▲▲▲
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
@@ -44,20 +63,25 @@
         const playerNameEl = document.getElementById('player-name');
         const actionButton = document.getElementById('action-button');
         const logoutButton = document.getElementById('logout-button');
+        const loader = document.getElementById('loader');
+        const menuContent = document.getElementById('main-menu-content');
+        
+        // --- THIS IS THE FIX FOR THE URL ERROR ---
+        // Get the base URL of your GitHub pages site
+        const baseURL = "https://deepmobb.github.io/gameiss/";
 
         // Listen for auth changes
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is logged in
-                // Set welcome message
-                playerNameEl.textContent = user.displayName || user.email;
-
-                // Check if user has a character
+                // --- User is logged in ---
+                loader.style.display = 'none';
+                menuContent.style.display = 'block';
+                playerNameEl.textContent = user.displayName || user.email.split('@')[0];
                 checkCharacter(user.uid);
-
             } else {
-                // User is signed out, redirect to login
-                window.location.href = 'index.html';
+                // --- User is definitively signed out ---
+                // FIXED: Used the full, absolute URL
+                window.location.href = baseURL + 'index.html';
             }
         });
 
@@ -71,14 +95,14 @@
                 actionButton.textContent = "Start Game";
                 actionButton.onclick = () => { 
                     alert('Game starts here!'); 
-                    // Later, you would change this to:
-                    // window.location.href = 'game.html';
+                    // window.location.href = baseURL + 'game.html'; // For later
                 };
             } else {
                 // No character found
                 actionButton.textContent = "Create Character";
                 actionButton.onclick = () => { 
-                    window.location.href = 'create.html'; 
+                    // FIXED: Used the full, absolute URL
+                    window.location.href = baseURL + 'create.html'; 
                 };
             }
         }
@@ -92,3 +116,4 @@
     </script>
 </body>
 </html>
+
