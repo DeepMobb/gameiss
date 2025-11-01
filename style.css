@@ -226,8 +226,8 @@ input[type="checkbox"]:checked + label {
     padding: 20px;
     text-align: left;
 }
-.race-label strong { font-size: 1.2rem; }
-.race-label p { font-size: 0.9rem; margin: 0; color: #aaa; }
+.race-label strong { /* ... existing code ... */ }
+.race-label p { /* ... existing code ... */ }
 
 /* === STYLES FOR CHARACTER CREATION PREVIEWS === */
 .race-preview {
@@ -375,12 +375,7 @@ input[type="radio"]:checked + .race-label .race-preview {
     opacity: 0.8; /* Make it look ethereal */
     box-shadow: 0 0 30px #d500f9;
 }
-#char-trail { /* Show the spectral trail for wisp */
-    display: block;
-    width: 100%;
-    height: 50px;
-    background: linear-gradient(to top, rgba(213, 0, 249, 0.4), transparent);
-    bottom: 0;
+#char-trail { /* ... existing code ... */
 }
 
 /* Glowing Eyes Modification */
@@ -397,18 +392,16 @@ input[type="radio"]:checked + .race-label .race-preview {
 
 /* Center Column: Game World */
 .game-world {
-    padding: 40px;
+    /* UPDATED: Removed padding and added position */
+    padding: 0;
     background: var(--bg-color); /* Darker than form-bg */
     overflow-y: auto;
     text-align: center;
+    position: relative; /* Needed for canvas sizing */
 }
-.game-world h1 {
-    color: white;
-}
-.game-world p {
-    font-size: 1.2rem;
-    color: #aaa;
-}
+
+/* REMOVED .game-world h1 and .game-world p */
+
 
 /* Right Column: Game Menu */
 .game-menu {
@@ -428,3 +421,11 @@ input[type="radio"]:checked + .race-label .race-preview {
 .game-menu .btn {
     width: 100%; /* Make buttons fill the menu width */
 }
+
+/* === NEW: STYLE FOR THE GAME CANVAS === */
+#game-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
