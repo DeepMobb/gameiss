@@ -4,39 +4,51 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mythic Realm - Login</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- I'm using "styles.css" to match your file name -->
+    <link rel="stylesheet" href="styles.css"> 
 </head>
 <body>
     <div class="container animated-background">
         <div class="form-box">
             <h1>Mythic Realm</h1>
-            <p>Welcome, adventurer. Your journey begins here.</p>
+            <h2 id="form-title">Login</h2>
             
-            <form id="login-form">
-                <input type="email" id="login-email" placeholder="Email" required>
-                <input type="password" id="login-password" placeholder="Password" required>
-                <button type="submit" class="btn">Login</button>
+            <!-- This is now ONE form for both Login and Sign Up -->
+            <form id="auth-form">
+                <input type="email" id="auth-email" placeholder="Email" required>
+                <input type="password" id="auth-password" placeholder="Password" required>
+                
+                <!-- This field will be hidden for Login -->
+                <div id="confirm-password-field" class="form-field-hidden">
+                    <input type="password" id="auth-confirm-password" placeholder="Confirm Password">
+                </div>
+
+                <button type="submit" class="btn" id="submit-btn">Login</button>
             </form>
             
-            <form id="signup-form">
-                <input type="email" id="signup-email" placeholder="Email" required>
-                <input type="password" id="signup-password" placeholder="Password" required>
-                <button type="submit" class="btn">Create Account</button>
-            </form>
+            <p id="auth-error" class="error-message"></p>
             
             <p>... or ...</p>
             
+            <!-- Google Sign-in Button -->
             <button id="google-signin" class="btn btn-google">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google G Logo" width="20" height="20">
                 Sign in with Google
             </button>
-            
-            <p id="auth-error" class="error-message"></p>
+
+            <!-- This link will toggle between Login and Create Account -->
+            <p class="toggle-link">
+                <a href="#" id="toggle-auth-link">Need an account? Create one</a>
+            </p>
         </div>
     </div>
     
+    <!-- 
+      JavaScript for Firebase Authentication & Form Toggling
+    -->
     <script type="module">
         // Import functions from the Firebase SDKs
+        // FIXED: Added 'https://' to the import URLs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { 
             getAuth, 
@@ -47,26 +59,57 @@
             onAuthStateChanged
         } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
-        // ▼▼▼ PASTE YOUR FIREBASE CONFIG OBJECT HERE ▼▼▼
+        // ▼▼▼ YOUR FIREBASE CONFIG IS NOW ADDED ▼▼▼
         const firebaseConfig = {
-          apiKey: "YOUR_API_KEY",
-          authDomain: "YOUR_AUTH_DOMAIN",
-          projectId: "YOUR_PROJECT_ID",
-          storageBucket: "YOUR_STORAGE_BUCKET",
-          messagingSenderId: "YOUR_SENDER_ID",
-          appId: "YOUR_APP_ID"
+          apiKey: "AIzaSyBws0s5YOGs4na5sGZCL9CEgmhuU_YiH2M",
+          authDomain: "mythic-realm-game.firebaseapp.com",
+          projectId: "mythic-realm-game",
+          storageBucket: "mythic-realm-game.firebasestorage.app",
+          messagingSenderId: "936485093407",
+          appId: "1:936485093407:web:ccd92c30a17152e21d152a"
         };
-        // ▲▲▲ PASTE YOUR FIREBASE CONFIG OBJECT HERE ▲▲▲
+        // ▲▲▲ YOUR FIREBASE CONFIG IS NOW ADDED ▲▲▲
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         
-        // Get elements
-        const loginForm = document.getElementById('login-form');
-        const signupForm = document.getElementById('signup-form');
-        const googleBtn = document.getElementById('google-signin');
+        // Get elements for form toggling
+        const formTitle = document.getElementById('form-title');
+        const authForm = document.getElementById('auth-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const confirmPasswordField = document.getElementById('confirm-password-field');
+        const toggleAuthLink = document.getElementById('toggle-auth-link');
         const authError = document.getElementById('auth-error');
+        const googleBtn = document.getElementById('google-signin');
+
+        let isLoginMode = true; // By default, show Login
+
+        // Function to toggle the form state
+        function toggleMode() {
+            isLoginMode = !isLoginMode; // Flip the mode
+            authError.textContent = ''; // Clear any errors
+
+            if (isLoginMode) {
+                // Switch to LOGIN mode
+                formTitle.textContent = 'Login';
+                submitBtn.textContent = 'Login';
+                confirmPasswordField.classList.add('form-field-hidden');
+                toggleAuthLink.textContent = 'Need an account? Create one';
+            } else {
+                // Switch to CREATE ACCOUNT mode
+                formTitle.textContent = 'Create Account';
+                submitBtn.textContent = 'Create Account';
+                confirmPasswordField.classList.remove('form-field-hidden');
+                toggleAuthLink.textContent = 'Already have an account? Login';
+            }
+        }
+
+        // Add click listener to the toggle link
+        toggleAuthLink.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent the link from jumping
+            toggleMode();
+        });
 
         // Check if user is already logged in
         onAuthStateChanged(auth, (user) => {
@@ -76,44 +119,45 @@
             }
         });
 
-        // Sign-up with Email
-        signupForm.addEventListener('submit', (e) => {
+        // Handle form submission for EITHER login or sign up
+        authForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const email = document.getElementById('signup-email').value;
-            const password = document.getElementById('signup-password').value;
-            
-            createUserWithEmailAndPassword(auth, email, password)
-                .then((userCredential) => {
-                    // Signed in, redirect to main
-                    window.location.href = 'main.html';
-                })
-                .catch((error) => {
-                    authError.textContent = error.message;
-                });
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            authError.textContent = ''; // Clear previous errors
+
+            if (isLoginMode) {
+                // --- LOGIN LOGIC ---
+                signInWithEmailAndPassword(auth, email, password)
+                    .then((userCredential) => {
+                        window.location.href = 'main.html';
+                    })
+                    .catch((error) => {
+                        authError.textContent = error.message;
+                    });
+            } else {
+                // --- CREATE ACCOUNT LOGIC ---
+                const confirmPassword = document.getElementById('auth-confirm-password').value;
+                if (password !== confirmPassword) {
+                    authError.textContent = "Passwords do not match.";
+                    return; // Stop execution
+                }
+
+                createUserWithEmailAndPassword(auth, email, password)
+                    .then((userCredential) => {
+                        window.location.href = 'main.html';
+                    })
+                    .catch((error) => {
+                        authError.textContent = error.message;
+                    });
+            }
         });
 
-        // Login with Email
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-
-            signInWithEmailAndPassword(auth, email, password)
-                .then((userCredential) => {
-                    // Signed in, redirect to main
-                    window.location.href = 'main.html';
-                })
-                .catch((error) => {
-                    authError.textContent = error.message;
-                });
-        });
-
-        // Google Sign-in
+        // Google Sign-in (no changes here)
         googleBtn.addEventListener('click', () => {
             const provider = new GoogleAuthProvider();
             signInWithPopup(auth, provider)
                 .then((result) => {
-                    // Signed in, redirect to main
                     window.location.href = 'main.html';
                 })
                 .catch((error) => {
@@ -123,3 +167,4 @@
     </script>
 </body>
 </html>
+
